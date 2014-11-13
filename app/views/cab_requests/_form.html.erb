@@ -1,0 +1,32 @@
+<%= form_for(@cab_request) do |f| %>
+
+ <div>
+      <p>cell number: <%=@cab_request.user_cell_no %></p>
+      <%= hidden_field_tag :user_cell_no, @cab_request.user_cell_no %>
+      <p>location: <%=@cab_request.location %></p>
+      <%= hidden_field_tag :location, @cab_request.location %>
+      <p>latitude: <%=@cab_request.latitude %></p>
+      <%= hidden_field_tag :latitude, @cab_request.latitude %>
+      <p>longitude: <%=@cab_request.longitude %></p>
+      <%= hidden_field_tag :longitude, @cab_request.longitude %>
+      <p>Do you want to forward this <i>Cab Request </i>? </p>
+  </div>
+
+  <% if @cab_request.errors.any? %>
+    <div id="error_explanation">
+      <h2><%= pluralize(@cab_request.errors.count, "error") %> prohibited this cab_request from being saved:</h2>
+
+      <ul>
+      <% @cab_request.errors.full_messages.each do |message| %>
+        <li><%= message %></li>
+      <% end %>
+      </ul>
+    </div>
+
+
+  <% end %>
+
+  <div class="actions">
+    <%= f.submit %>
+  </div>
+<% end %>

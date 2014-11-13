@@ -1,0 +1,11 @@
+# Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  driver_id: 1
+  user_cell_no: MyString
+  deletion_time: 2014-11-13 16:25:36
+
+two:
+  driver_id: 1
+  user_cell_no: MyString
+  deletion_time: 2014-11-13 16:25:36

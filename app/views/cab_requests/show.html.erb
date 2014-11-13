@@ -1,0 +1,8 @@
+<p id="notice"><%= notice %></p>
+<p><%= @message %> </p>
+<p>Location: <%= @cab_request.location %></p>
+<p>Latitude: <%= @cab_request.latitude %> </p>
+<p>Longitude: <%= @cab_request.longitude %> </p>
+
+<%= link_to 'Edit', edit_cab_request_path(@cab_request) %> |
+<%= link_to 'Back', cab_requests_path %>

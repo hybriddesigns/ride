@@ -1,0 +1,27 @@
+development:
+  adapter: mysql
+  encoding: utf8
+  reconnect: false
+  database: cab_service_development
+  pool: 5
+  username: root
+  password: root
+
+test:
+  adapter: mysql
+  encoding: utf8
+  reconnect: false
+  database: cab_service_test
+  pool: 5
+  username: root
+  password: root
+
+
+production:
+  adapter: mysql
+  encoding: utf8
+  reconnect: false
+  database: Cab_service
+  pool: 5
+  username: root
+  password: cab
