@@ -1,32 +1,30 @@
-<%= form_for(@cab_request) do |f| %>
+<%= @message %><br>
 
- <div>
-      <p>cell number: <%=@cab_request.user_cell_no %></p>
-      <%= hidden_field_tag :user_cell_no, @cab_request.user_cell_no %>
-      <p>location: <%=@cab_request.location %></p>
-      <%= hidden_field_tag :location, @cab_request.location %>
-      <p>latitude: <%=@cab_request.latitude %></p>
-      <%= hidden_field_tag :latitude, @cab_request.latitude %>
-      <p>longitude: <%=@cab_request.longitude %></p>
-      <%= hidden_field_tag :longitude, @cab_request.longitude %>
-      <p>Do you want to forward this <i>Cab Request </i>? </p>
-  </div>
-
-  <% if @cab_request.errors.any? %>
-    <div id="error_explanation">
-      <h2><%= pluralize(@cab_request.errors.count, "error") %> prohibited this cab_request from being saved:</h2>
-
-      <ul>
-      <% @cab_request.errors.full_messages.each do |message| %>
-        <li><%= message %></li>
-      <% end %>
-      </ul>
-    </div>
-
-
-  <% end %>
-
-  <div class="actions">
-    <%= f.submit %>
-  </div>
+<% if @location_to_confirm.present? %>
+<%= @location_to_confirm %><br>
 <% end %>
+
+<% if @more_location_options.present? %>
+<% @more_location_options.each_with_index do | option, index | %>
+<%= (index+1).to_s+"- "+option["address_components"][0]["long_name"] %><br>
+<% end %>
+<% end %>
+
+<% if @drivers.present? %>
+Nearest five driver numbers for testing<br>
+<% @drivers.each_with_index do |driver,index| %>
+<%= (index+1).to_s+"- "+driver.cell_no %><br>
+<%end %>
+<%end %>
+
+ <%= form_tag new_cab_request_path, :method=>'Get' do %>
+
+      <%= label_tag :cell %>
+      <%= text_field_tag :user_cell_no%>
+
+      <%= label_tag :string %>
+      <%= text_field_tag :location %>
+
+      <%= submit_tag "Send", class: "btn btn-large btn-primary" %>
+<% end %>
+

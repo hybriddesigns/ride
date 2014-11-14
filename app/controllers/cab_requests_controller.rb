@@ -21,83 +21,64 @@ class CabRequestsController < ApplicationController
 
     if is_user(params[:user_cell_no])
       if is_new(params[:user_cell_no])
-       @cab_request = CabRequest.new
-       @cab_request.user_cell_no=params[:user_cell_no]
-       @cab_request.status=false
-       @cab_request.broadcast=false
-       @cab_request.count=0.to_i
-       @result=HTTParty.get('https://maps.googleapis.com/maps/api/geocode/json?address='+params[:location]+'&key=AIzaSyBe4SyPWoNw_RKyCMK5v_bCD5OE9kvlTGE')
-       @location_to_confirm=@result["results"][0]["address_components"][0]["long_name"]
-       @cab_request.latitude=@result["results"][0]["geometry"]["location"]["lat"]
-       @cab_request.longitude=@result["results"][0]["geometry"]["location"]["lng"]
-       @cab_request.location=@location_to_confirm
-       @cab_request.save
-     else
-       @cab_request=CabRequest.where(:user_cell_no=>params[:user_cell_no]).last
+       @location_to_confirm=register_new_user_request(params[:user_cell_no], params[:location])
+       @message="Please reply y to confirm the location or n for more suggestions"
+      else
+       @cab_requests=CabRequest.where(:user_cell_no=>params[:user_cell_no])
+       @cab_request=@cab_requests.where(:status=>false).last
        if params[:location]== "n"
         if @cab_request.count<1
-
-         @count=@cab_request.count+1
-         @cab_request.update_attribute(:count, @count)
-         @result=HTTParty.get('https://maps.googleapis.com/maps/api/geocode/json?address='+@cab_request.location+'&key=AIzaSyBe4SyPWoNw_RKyCMK5v_bCD5OE9kvlTGE')
-         @result["results"]
+         @more_location_options=show_more_options(@cab_request)
+         @message="Please reply with the correct option"
         else
-          @ask_user_message="Please ask for the location to other people "
+          @message="Please ask for the location to other people "
           @cab_request.delete
         end
-       end
 
-       elsif params[:location].to_i>=0 && params[:location].to_i<=20
-         @result=HTTParty.get('https://maps.googleapis.com/maps/api/geocode/json?address='+@cab_request.location+'&key=AIzaSyBe4SyPWoNw_RKyCMK5v_bCD5OE9kvlTGE')
-         @location=@result["results"][params[:location]]
-         @cab_request.update_attribute(:location, @location["address_components"][0]["long_name"])
-         @cab_request.update_attribute(:latitude, @location["geometry"]["location"]["lat"])
-         @cab_request.update_attribute(:longitude, @location["geometry"]["location"]["lng"])
-         @cab_request.update_attribute(:status, false)
-         @cab_request.time_limit=Time.now+7.minutes
-         @drivers=Driver.by_distance(:origin=>[cab_request.latitude, cab_request.longitude]).limit(5)
-         #send message to first driver
-         @drivers.each_with_index do |x,index|
-          @driver_list=DriverList.new
-          @driver_list.driver_id=x.id
-          @driver_list.user_cell_no=@cab_request.user_cell_no
-          @driver_list.deletion_time=Time.now(index+1)
-          @driver.save
-        end
+       elsif params[:location].to_i>0 && params[:location].to_i<=20
+      
+         lock_choice(@cab_request, params[:location])
+         contact_nearby_drivers(@cab_request)
+         @driver_ids=@cab_request.driver_ids
+         @driver_ids=@driver_ids.split(%r{,\i*})
+         @drivers=Array.new
+         for i in 0..4
+           @drivers[i]=Driver.find(@driver_ids[i])
+         end
+         @message="your request has been forwarded to nearby drivers. Please wait for 7 minutes"
 
        elsif params[:location]== "y"
-         @cab_request.update_attribute(:status, false)
-         @cab_request.time_limit=Time.now+7.minutes
-         @drivers=Driver.by_distance(:origin=>[cab_request.latitude, cab_request.longitude]).limit(5)
-         #send message to first driver
-         @drivers.each_with_index do |x,index|
-          @driver_list=DriverList.new
-          @driver_list.driver_id=x.id
-          @driver_list.user_cell_no=@cab_request.user_cell_no
-          @driver_list.deletion_time=Time.now(index+1)
-          @driver.save
-        end
+         confirm_choice(@cab_request)
+         contact_nearby_drivers(@cab_request)
+         @driver_ids=@cab_request.driver_ids
+         @driver_ids=@driver_ids.split(%r{,\i*})
+         @drivers=Array.new
+         for i in 0..4
+           @drivers[i]=Driver.find(@driver_ids[i])
+         end
+         @message="your request has been forwarded to nearby drivers. Please wait for 7 minutes"
        else
-         @error_message="Command not known"
+         @message="Command unknown. Your Request is pending. Please reply with y or n"
        end
 
      end
          
-    end
 
   else
+    
     if(params[:location]=="y")
-      @cab_request=CabRequest.where(:user_cell_no=>params[:user_cell_no]).last
-      @driver=Driver.where(:cell_no=>params[:driver_cell_no]).first
-      @drivers=@cab_request.driver_lists
-      if @drivers.present? && @drivers.where(:id=>@driver.id)
-        @drivers.delete_all
-        @cab_request.update_attribute(:status, true)
-        @cab_request.driver_id=@driver.id
-      else
-
-      end
+      @driver=Driver.where(:cell_no=>params[:user_cell_no]).first.id
+      
+      confirm_deal(@driver)
+      @message="your deal has been confirmed"
+    elsif(params[:location]=="n")
+      @driver=Driver.where(:cell_no=>params[:user_cell_no]).first.id
+      @drivers=ping_next_driver(@driver)
+      #do nothing
     end
+
+
+  end
 
 
     # if params[:location] == "Next"
@@ -181,8 +162,8 @@ class CabRequestsController < ApplicationController
 
     def is_new(cell_no)
       @user=CabRequest.where(:user_cell_no=> cell_no)
-      @new=CabRequest.where(:status => false)
-      if @new.present?
+      @old_request=@user.where(:status => false).last
+      if @old_request.present?
         return false
       else
         return true
@@ -198,19 +179,85 @@ class CabRequestsController < ApplicationController
       end
     end
 
+    def register_new_user_request(user_cell_no, location)
+       @cab_request = CabRequest.new
+       @cab_request.user_cell_no=params[:user_cell_no]
+       @cab_request.status=false
+       @cab_request.broadcast=false
+       @cab_request.count=0.to_i
+       location=location.downcase.split.join('+').delete("'").delete(".").delete(",")
+       @result=HTTParty.get('https://maps.googleapis.com/maps/api/geocode/json?address='+location.to_s+'&key=AIzaSyBe4SyPWoNw_RKyCMK5v_bCD5OE9kvlTGE')
+       @cab_request.latitude=@result["results"][0]["geometry"]["location"]["lat"]
+       @cab_request.longitude=@result["results"][0]["geometry"]["location"]["lng"]
+       @location_to_confirm=@result["results"][0]["address_components"][0]["long_name"]
+       @cab_request.location=@location_to_confirm
+       @cab_request.save 
+       return @location_to_confirm
+    end
 
-    def find_nearby_drivers(cab_request)
-    @drivers=Driver.by_distance(:origin=>[cab_request.latitude, cab_request.longitude]).limit(5)
-    @available=false
-    @drivers.each do |x|
-      @available=driver_available(x)
-      if @available
-        cab_request.update_attribute(:driver_id, x.id)
-        break
+    def show_more_options(cab_request)
+      @count=cab_request.count+1
+      cab_request.update_attribute(:count, @count)
+      @result=HTTParty.get('https://maps.googleapis.com/maps/api/geocode/json?address='+location.to_s+'&key=AIzaSyBe4SyPWoNw_RKyCMK5v_bCD5OE9kvlTGE')
+      return @result["results"]
+    end
+
+    def lock_choice(cab_request, choice)
+      location=cab_request.location.downcase.split.join('+').delete("'").delete("'").delete(".").delete(",")
+      @result=HTTParty.get('https://maps.googleapis.com/maps/api/geocode/json?address='+location.to_s+'&key=AIzaSyBe4SyPWoNw_RKyCMK5v_bCD5OE9kvlTGE')
+      @selected_location=@result["results"][choice.to_i-1]
+      cab_request.update_attribute(:location, @selected_location["address_components"][0]["long_name"])
+      cab_request.update_attribute(:latitude, @selected_location["geometry"]["location"]["lat"])
+      cab_request.update_attribute(:longitude, @selected_location["geometry"]["location"]["lng"])
+      cab_request.update_attribute(:status, false)
+      cab_request.time_limit=Time.now+7.minutes
+    end
+
+    def confirm_choice(cab_request)
+      cab_request.update_attribute(:status, false)
+      cab_request.time_limit=Time.now+7.minutes
+      
+    end
+
+    def contact_nearby_drivers(cab_request)
+      @drivers=Driver.by_distance(:origin=>[cab_request.latitude, cab_request.longitude]).limit(50)
+      @driver_ids=""
+      @drivers.each do |driver_id|
+        @driver_ids=@driver_ids+driver_id.id.to_s+","
       end
-    end
+      @driver_ids=@driver_ids.split(%r{,\i*})
+      cab_request.update_attribute(:driver_id, @driver_ids[0])
+      @driver_ids=@driver_ids.join(",")
+      #send message to the first driver
+      #insert the new list into cab_request instance
+      cab_request.update_attribute(:driver_ids, @driver_ids)
     end
 
+    def confirm_deal(driver_id)
+      @cab_requests=CabRequest.where(:driver_id=>driver_id)
+      @cab_request=@cab_requests.where(:status=>false).last
+      @cab_request.update_attribute(:status, true)
+    end
+
+    def ping_next_driver(driver_id)
+      @cab_requests=CabRequest.where(:driver_id=>driver_id)
+      @cab_request=@cab_requests.where(:status=>false).last
+      @driver_ids=@cab_request.driver_ids
+      @driver_ids=@driver_ids.split(%r{,\i*})
+      @driver_ids.shift
+      @cab_request.update_attribute(:driver_id, @driver_ids[0])
+      @driver_ids=@driver_ids.join(",")
+      @cab_request.update_attribute(:driver_ids, @driver_ids)
+
+      @driver_ids=@cab_request.driver_ids
+         @driver_ids=@driver_ids.split(%r{,\i*})
+         @drivers=Array.new
+         for i in 0..4
+           @drivers[i]=Driver.find(@driver_ids[i])
+         end
+         
+      return @drivers
+    end
 
     def driver_available(driver)
       #send message on driver.cell_no
