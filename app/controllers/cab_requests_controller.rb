@@ -198,6 +198,7 @@ class CabRequestsController < ApplicationController
     def show_more_options(cab_request)
       @count=cab_request.count+1
       cab_request.update_attribute(:count, @count)
+      location=cab_request.location.downcase.split.join('+').delete("'").delete("'").delete(".").delete(",")
       @result=HTTParty.get('https://maps.googleapis.com/maps/api/geocode/json?address='+location.to_s+'&key=AIzaSyBe4SyPWoNw_RKyCMK5v_bCD5OE9kvlTGE')
       return @result["results"]
     end
