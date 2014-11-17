@@ -6,7 +6,14 @@
 
 <% if @more_location_options.present? %>
 <% @more_location_options.each_with_index do | option, index | %>
-<%= (index+1).to_s+"- "+option["address_components"][0]["long_name"] %><br>
+<% @option=option["address_components"] %>
+<% @name="" %>
+<%= (index+1).to_s+"- " %>
+<% @option.each do |comp| %>
+
+<%= comp["long_name"] + " " %>
+<% end %>
+<br>
 <% end %>
 <% end %>
 
