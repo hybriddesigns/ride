@@ -21,7 +21,7 @@ class CabRequestsController < ApplicationController
   # GET /cab_requests/new
   def new
 
-    if params[:location] == "" || params[:user_cell_no]== ""
+    if params[:location] == "" || params[:user_cell_no]== "" || params[:location].nil? || params[:user_cell_no].nil?
       @message="Please enter a cell number and a string"
 
     elsif Driver.is_not_driver(params[:user_cell_no]) # is the call from user?
@@ -39,8 +39,8 @@ class CabRequestsController < ApplicationController
           @cab_request.delete 
         end
        
-       elsif params[:location].to_i>0 && params[:location].to_i<=20 #if some option has been selected
-         lock_choice(@cab_request, params[:location]) #lock the choice (1 to 20)
+       elsif params[:location].to_i>0 && params[:location].to_i<=100 #if some option has been selected
+         lock_choice(@cab_request, params[:location]) #lock the choice (1 to 100)
          contact_nearby_drivers(@cab_request) #contact nearby drivers of the user selected location
          @drivers=show_nearby_drivers(@cab_request) #for testing we will show drivers in ascending order of their nearness.
          @message="your request has been forwarded to nearby drivers. Please wait for 7 minutes"
