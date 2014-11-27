@@ -144,8 +144,9 @@ class CabRequestsController < ApplicationController
     end
 
     def get_locations(user_entered_location)
-      location=user_entered_location.downcase.split.join('+').delete("'").delete(".").delete(",") #convert string into right form
-      @result=HTTParty.get(API_BASE_URL+location.to_s+APP_KEY)  
+      location = user_entered_location.downcase.split.join('+').delete("'").delete(".").delete(",") #convert string into right form
+      location = location.to_s + "Addis Abab Ethiopia"
+      @result  = HTTParty.get(API_BASE_URL + location.to_s + APP_KEY)  
       return @result
        
     end
