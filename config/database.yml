@@ -3,18 +3,20 @@ development:
   encoding: utf8
   reconnect: false
   database: cab_service_development
+  host: 127.0.0.1
   pool: 5
   username: root
-  password: root
+  password: 
 
 test:
   adapter: mysql
   encoding: utf8
   reconnect: false
   database: cab_service_test
+  host: 127.0.0.1
   pool: 5
   username: root
-  password: root
+  password: 
 
 
 production:

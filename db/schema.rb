@@ -17,8 +17,8 @@ ActiveRecord::Schema.define(version: 20141114112138) do
     t.datetime "created_at"
     t.datetime "updated_at"
     t.string   "location"
-    t.float    "latitude"
-    t.float    "longitude"
+    t.float    "latitude",     limit: 24
+    t.float    "longitude",    limit: 24
     t.integer  "driver_id"
     t.string   "user_cell_no"
     t.boolean  "broadcast"
@@ -38,8 +38,8 @@ ActiveRecord::Schema.define(version: 20141114112138) do
 
   create_table "drivers", force: true do |t|
     t.string   "name"
-    t.float    "location_lat"
-    t.float    "location_long"
+    t.float    "location_lat",  limit: 24
+    t.float    "location_long", limit: 24
     t.string   "location"
     t.datetime "created_at"
     t.datetime "updated_at"
