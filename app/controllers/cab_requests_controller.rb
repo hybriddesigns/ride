@@ -33,6 +33,7 @@ class CabRequestsController < ApplicationController
        send_message(@message, params) #send message function
       else # old call
        @cab_request=CabRequest.getCabRequests(params[:user_cell_no]).where(:status=>false).last #get pending request of this user
+       puts @cab_request
        if is_no(params) # user rejects the location
         if @cab_request.count<1 # first time rejection
          @more_location_options=show_more_options(@cab_request) #get more options
@@ -53,7 +54,7 @@ class CabRequestsController < ApplicationController
       
        elsif is_yes(params) #user agrees
          contact_nearby_drivers(@cab_request)
-         @drivers=show_nearby_drivers(@cab_request)
+         @drivers = show_nearby_drivers(@cab_request)
          @message="your request has been forwarded to nearby drivers. Please wait for 7 minutes"
          send_message(@message, params)
   
