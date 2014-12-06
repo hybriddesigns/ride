@@ -17,55 +17,66 @@ class CabRequestsController < ApplicationController
     # @cab_request = CabRequest.find(params[:id])
     # @message="Your request has been recorded and sent to the nearby driver. Please wait for 7 minutes."
   end
-
+# http://www.findlatitudeandlongitude.com/batch-geocode/#.VH8IGx9d48o
+# http://www.bulkgeocoder.com/
   # GET /cab_requests/new
   def new
 
-    if params[:location] == "" || params[:user_cell_no]== "" || params[:location].nil? || params[:user_cell_no].nil?
+    if params_not_legal(params)
       @message="Please enter a cell number and a string"
+      send_message(@message, params)
 
     elsif Driver.is_not_driver(params[:user_cell_no]) # is the call from user?
       if CabRequest.is_new(params[:user_cell_no]) # new call?
        @location_to_confirm=register_and_get_location(params[:user_cell_no], params[:location]) #location to show
        @message="Please reply y to confirm the location or n for more suggestions"
+       send_message(@message, params) #send message function
       else # old call
        @cab_request=CabRequest.getCabRequests(params[:user_cell_no]).where(:status=>false).last #get pending request of this user
-       if params[:location]== "n" || params[:location] == "N" # user rejects the location
+       if is_no(params) # user rejects the location
         if @cab_request.count<1 # first time rejection
          @more_location_options=show_more_options(@cab_request) #get more options
          @message="Please reply with the correct option"
+         send_message(@message, params)
         else # on rejection twice. delete the request and show "ask others" message
           @message="Please ask for the location to other people "
+          send_message(@message, params)
           @cab_request.delete 
         end
        
-       elsif params[:location].to_i>0 && params[:location].to_i<=100 #if some option has been selected
+       elsif is_option_selected(params) #if some option has been selected
          lock_choice(@cab_request, params[:location]) #lock the choice (1 to 100)
          contact_nearby_drivers(@cab_request) #contact nearby drivers of the user selected location
          @drivers=show_nearby_drivers(@cab_request) #for testing we will show drivers in ascending order of their nearness.
          @message="your request has been forwarded to nearby drivers. Please wait for 7 minutes"
+         send_message(@message, params)
       
-       elsif params[:location]== "y" || params[:location] == "Y" #user agrees
+       elsif is_yes(params) #user agrees
          contact_nearby_drivers(@cab_request)
          @drivers=show_nearby_drivers(@cab_request)
          @message="your request has been forwarded to nearby drivers. Please wait for 7 minutes"
+         send_message(@message, params)
   
        else
          @message="Command unknown."
+         send_message(@message, params)
        end
      end
 
   else #if driver
-    if params[:location]=="y" || params[:location]=="Y" 
+    if is_yes(params)
       @driver=Driver.where(:cell_no=>params[:user_cell_no]).first
       @driver.confirm_deal
       @message="your deal has been confirmed."
-    elsif(params[:location]=="n" || params[:location]=="N")
+      send_message(@message, params)
+    elsif is_no(params)
       @driver=Driver.where(:cell_no=>params[:user_cell_no]).first.id
       @drivers=ping_next_driver(@driver)
       @message="Reply with the first driver on the list"
+      send_message(@message, params)
     else
       @message="Command unknown."
+      send_message(@message, params)
     end
 
   end
@@ -116,15 +127,31 @@ class CabRequestsController < ApplicationController
   private
     # Use callbacks to share common setup or constraints between actions.
 
+    def params_not_legal(params)
+      params[:location] == "" || params[:user_cell_no]== "" || params[:location].nil? || params[:user_cell_no].nil?
+    end
+
+    def is_no(params)
+      params[:location]== "n" || params[:location] == "N" || params[:location] == "no" || params[:location] == "No"
+    end
+
+    def is_yes(params)
+      params[:location]== "y" || params[:location] == "Y" || params[:location] == "yes" || params[:location] == "Yes"
+    end
+
+    def is_option_selected(params)
+      params[:location].to_i>0 && params[:location].to_i<=100
+    end
+
     def register_and_get_location(user_cell_no, location)
-       @result=get_locations(location)
-       @base=@result["results"][0] #for first result only
-       lat=get_latitude(@base)
-       long=get_longitude(@base)
-       @location_to_confirm=get_location_name(@base)
-       @cab_request = CabRequest.new
-       @cab_request.register_request(user_cell_no, lat, long, location)
-       return @location_to_confirm
+      @result=get_locations(location)
+      @base=@result["results"][0] #for first result only
+      lat=get_latitude(@base)
+      long=get_longitude(@base)
+      @location_to_confirm=get_location_name(@base)
+      @cab_request = CabRequest.new
+      @cab_request.register_request(user_cell_no, lat, long, location)
+      return @location_to_confirm
     end
 
     def show_more_options(cab_request)
@@ -132,6 +159,10 @@ class CabRequestsController < ApplicationController
       @result=get_locations(cab_request.location) #get all the locations for a string to show more options
       
       return @result["results"]
+    end
+
+    def send_message(message, params)
+      "send message to the params['user_cell_no'] once kannel is integrated"
     end
 
     def lock_choice(cab_request, choice)
@@ -145,11 +176,10 @@ class CabRequestsController < ApplicationController
 
     def get_locations(user_entered_location)
       location = user_entered_location.downcase.split.join('+').delete("'").delete(".").delete(",") #convert string into right form
-      location = location.to_s + "Addis Abab Ethiopia"
-      binding.pry
+      # location = location.to_s + "Addis Abab Ethiopia"
+      location = location.to_s
       @result  = HTTParty.get(URI::encode(API_BASE_URL + location.to_s + APP_KEY))  
-      return @result
-       
+      return @result  
     end
 
     def get_latitude(query_result)
@@ -187,8 +217,8 @@ class CabRequestsController < ApplicationController
       end
       @driver_ids=@driver_ids.split(%r{,\i*})
       cab_request.update_attribute(:driver_id, @driver_ids[0])
+      # send_message("", )
       @driver_ids=@driver_ids.join(",")
-      #send message to the first driver
       #insert the new list into cab_request instance
       cab_request.update_attribute(:driver_ids, @driver_ids)
     end
@@ -203,28 +233,6 @@ class CabRequestsController < ApplicationController
       @cab_request.update_attribute(:driver_ids, @driver_ids) # store the string
       return show_nearby_drivers(@cab_request) #return the list to show
     end
-
-    # def driver_available(driver)
-    #   #send message on driver.cell_no
-    #   @available=true
-    #   binding.pry
-    #   return @available
-    # end
-    # def confirm_location(location)
-    #   confirmed= true
-    #   puts "your selected location is: " + location +". Do you confirm?"
-    #   binding.pry
-    #   return confirmed
-    # end
-
-    # def select_a_location(locations) 
-    #   @choice=1.to_i
-    #   locations.each_with_index do |x, index|
-    #   puts "#{index}-"+ locations[index]["address_components"][0]["long_name"]
-    #   end
-    #   binding.pry
-    #   return @choice
-    # end
 
     def set_cab_request
       @cab_request = CabRequest.find(params[:id])

@@ -17,29 +17,3 @@ end
 
 # Learn more: http://github.com/javan/whenever
 
-@passed_time=Time.now-6.minutes
-@cab_requests=CabRequest.where(:status=>false, :broadcast=>false).where("updated_time < ?", @passed_time)
-
-@cab_requests.each do |cab_request|
-	#send broadcast to all remaining drivers
-	cab_request.update_attribute(:broadcast=> true)
-end
-
-@passed_time=Time.now-1.minutes
-@cab_requests=CabRequest.where(:status=>false, :boradcast=>false).where("updated_time < ?", @passed_time)
-
-@cab_requests.each do |cab_request|
-	@driver_ids=cab_request.driver_ids
-	@driver_ids=@driver_ids.split(%r{,\i*})
-    cab_request.update_attribute(:driver_id=>@driver_ids.shift)
-    @driver_ids=@driver_ids.join(",")
-    cab_request.update_attribute(:driver_ids=>@driver_ids)
-end
-
-
-@passed_time=Time.now-20.minutes
-@cab_requests=CabRequest.where(:status=>false, :boradcast=>false).where("updated_time < ?", @passed_time)
-
-@cab_requests.each do |cab_request|
-	cab_request.delete
-end
