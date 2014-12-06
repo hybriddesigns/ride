@@ -26,4 +26,4 @@ production:
   database: Cab_service
   pool: 5
   username: root
-  password: cab
+  password: root
