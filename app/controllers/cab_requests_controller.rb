@@ -204,9 +204,10 @@ class CabRequestsController < ApplicationController
       @driver_ids=cab_request.driver_ids
       @driver_ids=@driver_ids.split(%r{,\i*})
       @drivers=Array.new
-      for i in 0..4
-        @drivers[i]=Driver.find(@driver_ids[i])
+      @driver_ids.each_with_index do |driver_id, index|
+        @drivers[index]=Driver.find(driver_id)
       end
+      @drivers=@drivers.first(5)
       return @drivers
     end
 
