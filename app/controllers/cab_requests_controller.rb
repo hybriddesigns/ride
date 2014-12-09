@@ -22,6 +22,7 @@ class CabRequestsController < ApplicationController
     phone   = params[:phone]
     message = params[:message]
     puts "#{phone} & #{message}"
+    return
   end 
 
 
