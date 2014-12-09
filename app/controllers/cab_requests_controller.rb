@@ -1,7 +1,7 @@
 class CabRequestsController < ApplicationController
   include HTTParty
   require 'json'
-  before_action :set_cab_request, only: [:show, :edit, :update, :destroy]
+  before_action :set_cab_request, only: [:edit, :update, :destroy]
   API_BASE_URL = 'https://maps.googleapis.com/maps/api/geocode/json?address='
   APP_KEY= '&key=AIzaSyBe4SyPWoNw_RKyCMK5v_bCD5OE9kvlTGE'
 
@@ -17,6 +17,14 @@ class CabRequestsController < ApplicationController
     # @cab_request = CabRequest.find(params[:id])
     # @message="Your request has been recorded and sent to the nearby driver. Please wait for 7 minutes."
   end
+
+  def receive_sms
+    phone   = params[:phone]
+    message = params[:message]
+    puts "#{phone} & #{message}"
+  end 
+
+
 # http://www.findlatitudeandlongitude.com/batch-geocode/#.VH8IGx9d48o
 # http://www.bulkgeocoder.com/
   # GET /cab_requests/new

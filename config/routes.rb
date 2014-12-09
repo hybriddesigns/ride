@@ -1,7 +1,10 @@
 Rails.application.routes.draw do
+  root 'cab_requests#new'
+  get 'cab_requests/new/:user_cell_no/:location' => 'cab_requests#new'
+  get 'cab_requests/receive_sms' => 'cab_requests#receive_sms'
   resources :cab_requests
 
-  get 'cab_requests/new/:user_cell_no/:location' => 'cab_requests#new'
+
   # The priority is based upon order of creation: first created -> highest priority.
   # See how all your routes lay out with "rake routes".
 
