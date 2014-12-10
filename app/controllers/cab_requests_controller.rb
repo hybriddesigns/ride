@@ -22,8 +22,7 @@ class CabRequestsController < ApplicationController
     phone   = params[:phone]
     message = params[:message]
     puts "#{phone} & #{message}"
-    render :layout => false
-    return "#{phone} & #{message}"
+    render :nothing => true
   end 
 
 
