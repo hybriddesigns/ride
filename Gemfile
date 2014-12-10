@@ -38,6 +38,8 @@ gem 'json', '~> 1.8.1'
 gem 'mysql', '~> 2.9.1'
 
 gem 'whenever', :require => false
+
+gem 'similar_text'
 # Use ActiveModel has_secure_password
 # gem 'bcrypt', '~> 3.1.7'
 

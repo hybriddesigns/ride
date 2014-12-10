@@ -1,164 +1,155 @@
 class CabRequestsController < ApplicationController
   include HTTParty
   require 'json'
-  before_action :set_cab_request, only: [:edit, :update, :destroy]
+
   API_BASE_URL = 'https://maps.googleapis.com/maps/api/geocode/json?address='
   APP_KEY= '&key=AIzaSyBe4SyPWoNw_RKyCMK5v_bCD5OE9kvlTGE'
 
-  # GET /cab_requests
-  # GET /cab_requests.json
-  def index
-    @cab_requests = CabRequest.all
-  end
+  # -1. Check message is empty or not -Done
+  # 0. Kick out request if driver already registerd -Done
+  # 1. Get Location from the sms -Done
+  # 2. Pass to google API and get 3 response back and send sms -Done
+  # 3. If driver replies with (1,2,3) then store that address. -Done
+  # 4. If driver replies with (n) then kill session -Done
+  # 5. If not then ask him to ask near peoples for correct place name -Done
+  # 6. Process location sms again -Done
+  # 7. If location matchs then register driver with lat longs -Done
 
-  # GET /cab_requests/1
-  # GET /cab_requests/1.json
-  def show
-    # @cab_request = CabRequest.find(params[:id])
-    # @message="Your request has been recorded and sent to the nearby driver. Please wait for 7 minutes."
-  end
+  def receive_sms_for_driver_registration
+    @cell_no     = params[:phone]
+    @inc_message = params[:message]
+    @short_code  = "8812"
 
-  def receive_sms
-    phone   = params[:phone]
-    message = params[:message]
-    puts "#{phone} & #{message}"
+    if params_not_legal(@inc_message) # -1. Check message is empty or not
+      @message = "Please enter a cell number and a string"
+      send_message(@cell_no, @message, @short_code) # 0. Kick out request if driver already registerd
+    elsif(Driver.where("cell_no = ?", @cell_no).present?)
+      @message="You are already registered in our system. Thank you!"
+      send_message(@cell_no, @message, @short_code)
+    elsif(!DriverRegistrationRequest.where("cell_no = ?", @cell_no).present?) # 1. Get Location from the sms      
+       @location_to_confirm = driver_register_and_get_location(@cell_no, @inc_message, @short_code)        
+    else #Already Driver Session initiated
+      @driver_reg_session = DriverRegistrationRequest.where("cell_no = ?", @cell_no).first
+
+      if(@inc_message == "1" || @inc_message == "2" || @inc_message == "3")
+        locations = @driver_reg_session.location.split("-")
+        if(@inc_message.to_i > locations.count)
+          @message = "You have chosen wrong input. Please send again correct input"
+          send_message(@cell_no, @message, @short_code) # 0. Kick out request if driver send wrong option
+        else
+          chosen_location = locations[@inc_message.to_i - 1].split(",")
+          Driver.create(:cell_no => @cell_no, :location_lat => chosen_location[1],  :location_long =>  chosen_location[2], :location =>  chosen_location[0])
+          @driver_reg_session.delete
+          @message = "You are registered in the system successfully. Thank you!"
+          send_message(@cell_no, @message, @short_code)                            
+        end  
+
+      elsif is_no(@inc_message)
+        @driver_reg_session.delete
+        @message = "Please ask near by people for your location name and send message again"
+        send_message(@cell_no, @message, @short_code)                            
+      end
+
+    end  
+    puts "#{@cell_no} & #{@inc_message}"
     render :nothing => true
   end 
 
+  # def receive_sms
+  #   @cell_no     = params[:phone]
+  #   @inc_message = params[:message]
+  #   puts "#{@cell_no} & #{@inc_message}"
+  #   render :nothing => true
+  # end  
 
 # http://www.findlatitudeandlongitude.com/batch-geocode/#.VH8IGx9d48o
 # http://www.bulkgeocoder.com/
   # GET /cab_requests/new
-  def new
-
-    if params_not_legal(params)
+  def receive_sms_for_ride
+    @cell_no     = params[:phone]
+    @inc_message = params[:message]
+    @short_code  = "8202"
+    if params_not_legal(@inc_message)
       @message="Please enter a cell number and a string"
-      send_message(@message, params)
-
-    elsif Driver.is_not_driver(params[:user_cell_no]) # is the call from user?
-      if CabRequest.is_new(params[:user_cell_no]) # new call?
-       @location_to_confirm=register_and_get_location(params[:user_cell_no], params[:location]) #location to show
-       @message="Please reply y to confirm the location or n for more suggestions"
-       send_message(@message, params) #send message function
+      send_message(@cell_no, @message, @short_code)
+    elsif Driver.is_not_driver(@cell_no) # is the call from user?
+      if CabRequest.is_new(@cell_no) # new call?
+        @location_to_confirm = register_and_get_location(@cell_no, @inc_message) #location to show
+        @message = "Please reply y to confirm the location or n for more suggestions"
+        send_message(@cell_no, @message, @short_code)
       else # old call
-       @cab_request=CabRequest.getCabRequests(params[:user_cell_no]).where(:status=>false).last #get pending request of this user
-       puts "Here"+@cab_request.user_cell_no
-       if is_no(params) # user rejects the location
-        if @cab_request.count<1 # first time rejection
-         @more_location_options=show_more_options(@cab_request) #get more options
-         @message="Please reply with the correct option"
-         send_message(@message, params)
-        else # on rejection twice. delete the request and show "ask others" message
-          @message="Please ask for the location to other people "
-          send_message(@message, params)
-          @cab_request.delete 
+        @cab_request=CabRequest.getCabRequests(@cell_no).where(:status=>false).last #get pending request of this user
+        if is_no(@inc_message) # user rejects the location
+          if (@cab_request.count < 1) # first time rejection
+            @more_location_options = show_more_options(@cab_request) #get more options
+            @message = "Please reply with the correct option"
+            send_message(@cell_no, @message, @short_code)
+          else # on rejection twice. delete the request and show "ask others" message
+            @message = "Please ask for the location to other people."
+            send_message(@cell_no, @message, @short_code)
+            @cab_request.delete 
+          end       
+        elsif is_option_selected(@inc_message) #if some option has been selected
+          lock_choice(@cab_request, @inc_message) #lock the choice (1 to 100)
+          contact_nearby_drivers(@cab_request) #contact nearby drivers of the user selected location
+          @drivers = show_nearby_drivers(@cab_request) #for testing we will show drivers in ascending order of their nearness.
+          @message = "Your request has been forwarded to nearby drivers. Please wait for 7 minutes"
+          send_message(@cell_no, @message, @short_code)
+        elsif is_yes(@inc_message) #user agrees
+          contact_nearby_drivers(@cab_request)
+          @drivers = show_nearby_drivers(@cab_request)
+          @message = "Your request has been forwarded to nearby drivers. Please wait for 7 minutes"
+          send_message(@cell_no, @message, @short_code)
+        else
+          @message = "You have entered invalid input."
+          send_message(@cell_no, @message, @short_code)
         end
-       
-       elsif is_option_selected(params) #if some option has been selected
-         lock_choice(@cab_request, params[:location]) #lock the choice (1 to 100)
-         contact_nearby_drivers(@cab_request) #contact nearby drivers of the user selected location
-         @drivers=show_nearby_drivers(@cab_request) #for testing we will show drivers in ascending order of their nearness.
-         @message="your request has been forwarded to nearby drivers. Please wait for 7 minutes"
-         send_message(@message, params)
-      
-       elsif is_yes(params) #user agrees
-         contact_nearby_drivers(@cab_request)
-         @drivers = show_nearby_drivers(@cab_request)
-         @message="your request has been forwarded to nearby drivers. Please wait for 7 minutes"
-         send_message(@message, params)
-  
-       else
-         @message="Command unknown."
-         send_message(@message, params)
-       end
-     end
-
-  else #if driver
-    if is_yes(params)
-      @driver=Driver.where(:cell_no=>params[:user_cell_no]).first
-      @driver.confirm_deal
-      @message="your deal has been confirmed."
-      send_message(@message, params)
-    elsif is_no(params)
-      @driver=Driver.where(:cell_no=>params[:user_cell_no]).first.id
-      @drivers=ping_next_driver(@driver)
-      @message="Reply with the first driver on the list"
-      send_message(@message, params)
-    else
-      @message="Command unknown."
-      send_message(@message, params)
-    end
-
-  end
-  end
-
-  # GET /cab_requests/1/edit
-  def edit
-  end
-
-  # POST /cab_requests
-  # POST /cab_requests.json
-  def create
-    respond_to do |format|
-      if @cab_request.save
-        format.html { redirect_to @cab_request, notice: 'Cab request was successfully created.' }
-        format.json { render :show, status: :created, location: @cab_request }
-      else
-        format.html { render :new }
-        format.json { render json: @cab_request.errors, status: :unprocessable_entity }
       end
-    end
-  end
-
-  # PATCH/PUT /cab_requests/1
-  # PATCH/PUT /cab_requests/1.json
-  def update
-    respond_to do |format|
-      if @cab_request.update(cab_request_params)
-        format.html { redirect_to @cab_request, notice: 'Cab request was successfully updated.' }
-        format.json { render :show, status: :ok, location: @cab_request }
+    else #if driver
+      if is_yes(@inc_message)
+        @driver = Driver.where(:cell_no => @cell_no).first
+        @driver.confirm_deal
+        @message = "Your deal has been confirmed."
+        send_message(@cell_no, @message, @short_code)
+      elsif is_no(@inc_message)
+        @driver  = Driver.where(:cell_no=>params[:user_cell_no]).first.id
+        @drivers = ping_next_driver(@driver)
+        @message = "Reply with the first driver on the list"
+        send_message(@cell_no, @message, @short_code)
       else
-        format.html { render :edit }
-        format.json { render json: @cab_request.errors, status: :unprocessable_entity }
+        @message="You have entered invalid input."
+        send_message(@cell_no, @message, @short_code)
       end
-    end
-  end
 
-  # DELETE /cab_requests/1
-  # DELETE /cab_requests/1.json
-  def destroy
-    @cab_request.destroy
-    respond_to do |format|
-      format.html { redirect_to cab_requests_url, notice: 'Cab request was successfully destroyed.' }
-      format.json { head :no_content }
-    end
+    end  
+    render :nothing => true
   end
 
   private
     # Use callbacks to share common setup or constraints between actions.
 
-    def params_not_legal(params)
-      params[:location] == "" || params[:user_cell_no]== "" || params[:location].nil? || params[:user_cell_no].nil?
+    def params_not_legal(message)
+      message == "" || message.nil?
     end
 
-    def is_no(params)
-      params[:location]== "n" || params[:location] == "N" || params[:location] == "no" || params[:location] == "No"
+    def is_no(message)
+      message == "n" || message == "N" || message == "no" || message == "No"
     end
 
-    def is_yes(params)
-      params[:location]== "y" || params[:location] == "Y" || params[:location] == "yes" || params[:location] == "Yes"
+    def is_yes(message)
+      message == "y" || message == "Y" || message == "yes" || message == "Yes"
     end
 
-    def is_option_selected(params)
-      params[:location].to_i>0 && params[:location].to_i<=100
+    def is_option_selected(message)
+      message.to_i > 0 && message.to_i <= 100
     end
 
     def register_and_get_location(user_cell_no, location)
-      @result=get_locations(location)
-      @base=@result["results"][0] #for first result only
-      lat=get_latitude(@base)
-      long=get_longitude(@base)
-      @location_to_confirm=get_location_name(@base)
+      @result =get_locations(location)
+      @base   = @result["results"][0] #for first result only
+      lat     = get_latitude(@base)
+      long    = get_longitude(@base)
+      @location_to_confirm = get_location_name(@base)
       @cab_request = CabRequest.new
       @cab_request.register_request(user_cell_no, lat, long, location)
       return @location_to_confirm
@@ -166,21 +157,21 @@ class CabRequestsController < ApplicationController
 
     def show_more_options(cab_request)
       cab_request.increment_count #count of location rejection by user
-      @result=get_locations(cab_request.location) #get all the locations for a string to show more options
+      @result = get_locations(cab_request.location) #get all the locations for a string to show more options
       
       return @result["results"]
     end
 
-    def send_message(message, params)
-      "send message to the params['user_cell_no'] once kannel is integrated"
+    def send_message(cell_no, message, short_code)
+      Driver.connection.execute("INSERT INTO send_sms (momt, sender, receiver, msgdata, sms_type) VALUES ('MT','"+short_code+"','"+ cell_no+"','"+message+"',2)")
     end
 
     def lock_choice(cab_request, choice)
-      @result=get_locations(cab_request.location)
-      @selected_location=@result["results"][choice.to_i-1]
-      lat=get_latitude(@selected_location)
-      long=get_longitude(@selected_location)
-      location=get_location_name(@selected_location)
+      @result = get_locations(cab_request.location)
+      @selected_location = @result["results"][choice.to_i-1]
+      lat = get_latitude(@selected_location)
+      long = get_longitude(@selected_location)
+      location = get_location_name(@selected_location)
       cab_request.lock_choice(lat, long, location)
     end
 
@@ -202,47 +193,89 @@ class CabRequestsController < ApplicationController
 
     def get_location_name(query_result)
       @address_components=query_result["address_components"]
-      @location_name=""
+      @location_name = ""
       @address_components.each do |comp|
-        @location_name=@location_name+comp["long_name"]+" "
+        @location_name = @location_name+comp["long_name"]+" "
       end
       return @location_name
     end
 
     def show_nearby_drivers(cab_request)
-      @driver_ids=cab_request.driver_ids
-      @driver_ids=@driver_ids.split(%r{,\i*})
-      @drivers=Array.new
+      @driver_ids = cab_request.driver_ids
+      @driver_ids = @driver_ids.split(%r{,\i*})
+      @drivers    = Array.new
       @driver_ids.each_with_index do |driver_id, index|
-        @drivers[index]=Driver.find(driver_id)
+        @drivers[index] = Driver.find(driver_id)
       end
-      @drivers=@drivers.first(5)
+      @drivers = @drivers.first(5)
       return @drivers
     end
 
     def contact_nearby_drivers(cab_request)
-      @drivers=Driver.by_distance(:origin=>[cab_request.latitude, cab_request.longitude]).limit(50)
-      @driver_ids=""
+      @drivers = Driver.by_distance(:origin=>[cab_request.latitude, cab_request.longitude]).limit(50)
+      @driver_ids = ""
       @drivers.each do |driver_id|
-        @driver_ids=@driver_ids+driver_id.id.to_s+","
+        @driver_ids = @driver_ids+driver_id.id.to_s+","
       end
-      @driver_ids=@driver_ids.split(%r{,\i*})
+      @driver_ids = @driver_ids.split(%r{,\i*})
       cab_request.update_attribute(:driver_id, @driver_ids[0])
       # send_message("", )
-      @driver_ids=@driver_ids.join(",")
+      @driver_ids = @driver_ids.join(",")
       #insert the new list into cab_request instance
       cab_request.update_attribute(:driver_ids, @driver_ids)
     end
 
     def ping_next_driver(driver_id)
-      @cab_request=CabRequest.where(:driver_id=>driver_id).where(:status=>false).last
-      @driver_ids=@cab_request.driver_ids #get comma seperated ids of drivers
-      @driver_ids=@driver_ids.split(%r{,\i*}) #converts to array
+      @cab_request = CabRequest.where(:driver_id=>driver_id).where(:status=>false).last
+      @driver_ids  = @cab_request.driver_ids #get comma seperated ids of drivers
+      @driver_ids  = @driver_ids.split(%r{,\i*}) #converts to array
       @driver_ids.shift #pops the first one out
       @cab_request.update_attribute(:driver_id, @driver_ids[0]) #stores the current first id
-      @driver_ids=@driver_ids.join(",") #convert back to comma seperated string
+      @driver_ids  = @driver_ids.join(",") #convert back to comma seperated string
       @cab_request.update_attribute(:driver_ids, @driver_ids) # store the string
       return show_nearby_drivers(@cab_request) #return the list to show
+    end
+
+    # For Drivers
+    def driver_register_and_get_location(cell_no, location, short_code)
+      @result = get_locations(location)
+
+      if(@result['results'].present?)
+        # Check if location matchs with google correctly if match register and exit
+        @result['results'].each_with_index do |address, index|
+          if(index <= 3)
+            if(location.similar(address["formatted_address"]) >= 80.0)
+              Driver.create(:cell_no => cell_no, :location_lat => get_latitude(address), :location_long => get_longitude(address), :location => address["formatted_address"])
+              @driver_reg_session = DriverRegistrationRequest.where("cell_no = ?", cell_no).first
+              @driver_reg_session.delete
+              message="You are registered in the system successfully. Thank you!"
+              send_message(cell_no, message, short_code)        
+              return
+            end  
+          end  
+        end
+
+        # Check if location not matchs with google correctly
+        @message  = ""
+        @session_message  = ""
+        @result['results'].each_with_index do |address, index|
+          if(index <= 3)
+            location = address["address_components"][0]['long_name']
+            lat      = get_latitude(address)
+            long     = get_longitude(address)
+            @message  += (index+1).to_s + "- " + location.to_s + "\n"
+            @session_message += location.to_s+","+lat.to_s+","+long.to_s+"-"
+          end  
+        end
+        send_message(cell_no, @message, short_code) #Send Message
+        DriverRegistrationRequest.create(:cell_no => cell_no, :location => @session_message.gsub( /.{1}$/, '' ), :active => false)       
+
+
+      else # If location is invalid and no result from Google API
+        message="Entered location is invalid. Please send again."
+        send_message(cell_no, message, short_code)        
+      end  
+
     end
 
     def set_cab_request
@@ -253,4 +286,5 @@ class CabRequestsController < ApplicationController
     def cab_request_params
       params.require(:cab_request).permit(:location, :latitude, :longitude)
     end
+
 end
