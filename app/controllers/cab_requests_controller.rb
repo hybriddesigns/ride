@@ -163,7 +163,7 @@ class CabRequestsController < ApplicationController
     end
 
     def send_message(cell_no, message, short_code)
-      Driver.connection.execute("INSERT INTO send_sms (momt, sender, receiver, msgdata, sms_type) VALUES ('MT','"+short_code+"','"+ cell_no+"','"+message+"',2)")
+      Driver.connection.execute("INSERT INTO send_sms (momt, sender, receiver, msgdata, sms_type, smsc_id) VALUES ('MT','"+short_code+"','"+ cell_no+"','"+message+"',2,','"+short_code+"')")
     end
 
     def lock_choice(cab_request, choice)
