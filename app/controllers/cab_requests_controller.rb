@@ -280,7 +280,7 @@ class CabRequestsController < ApplicationController
         end
 
         # Check if location not matchs with google correctly
-        @message  = "Please SMS back the correct number of your location \n\n"
+        @message  = "Please SMS back the correct number of your location\n"
         @session_message  = ""
         @result['results'].each_with_index do |address, index|
           if(index < 3)
@@ -293,9 +293,9 @@ class CabRequestsController < ApplicationController
         end
 
         if(@result['results'].count > 3)
-          @message  += "\nNeed more? SMS back M"
+          @message  += "Need more? SMS back M"
         else  
-          @message  += "\nIf location not listed? SMS back N"
+          @message  += "If location not listed? SMS back N"
         end  
 
         send_message(cell_no, @message, short_code) #Send Message
@@ -329,9 +329,9 @@ class CabRequestsController < ApplicationController
         end
 
         if(@result['results'].count > (more_location_count + 3))
-          @message  += "\n Need more? SMS back M"
+          @message  += "Need more? SMS back M"
         else  
-          @message  += "\nIf location not listed? SMS back N"
+          @message  += "If location not listed? SMS back N"
         end  
 
         send_message(driver_reg_session.cell_no, @message, short_code) #Send Message
