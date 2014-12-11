@@ -53,13 +53,13 @@ class CabRequestsController < ApplicationController
           locations.each_with_index do |location, index|
             location_name = location.split(",")[0]
             if(location_name.eql? @inc_message)
-              @inc_message = index + 1
+              @inc_message = (index + 1).to_s
               break
             end  
           end  
         end  
 
-        if(@inc_message == "1" || @inc_message == "2" || @inc_message == "3")
+        if(@inc_message == "1" || "2" || "3" || 1 || 2 || 3)
           locations = @driver_reg_session.location.split("-")
           if(@inc_message.to_i > locations.count)
             @message = "You have chosen wrong input. Please send again correct input"
