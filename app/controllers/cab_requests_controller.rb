@@ -47,6 +47,17 @@ class CabRequestsController < ApplicationController
          @location_to_confirm = driver_register_and_get_location(@cell_no, @inc_message, @short_code)
       else #Already Driver Session initiated
         @driver_reg_session = DriverRegistrationRequest.where("cell_no = ?", @cell_no).first
+        locations = @driver_reg_session.location.split("-")
+        
+        if(locations.present?) #Logic for name input
+          locations.each_with_index do |location, index|
+            location_name = location.split(",")[0]
+            if(location_name.include? @inc_message)
+              @inc_message = index + 1
+              break
+            end  
+          end  
+        end  
 
         if(@inc_message == "1" || @inc_message == "2" || @inc_message == "3")
           locations = @driver_reg_session.location.split("-")
@@ -267,7 +278,7 @@ class CabRequestsController < ApplicationController
       if(@result['results'].present?)
         # Check if location matchs with google correctly if match register and exit
         @result['results'].each_with_index do |address, index|
-          if(index <= 3)
+          if(index < 2)
             if(searched_location.similar(address["formatted_address"]) >= 85.0)
               Driver.create(:cell_no => cell_no, :location_lat => get_latitude(address), :location_long => get_longitude(address), :location => address["formatted_address"])
               @driver_reg_session = DriverRegistrationRequest.where("cell_no = ?", cell_no).first
@@ -283,7 +294,7 @@ class CabRequestsController < ApplicationController
         @message  = "Please SMS back the correct number of your location\n"
         @session_message  = ""
         @result['results'].each_with_index do |address, index|
-          if(index < 3)
+          if(index < 2)
             location = address["address_components"][0]['long_name']
             lat      = get_latitude(address)
             long     = get_longitude(address)
@@ -292,7 +303,7 @@ class CabRequestsController < ApplicationController
           end  
         end
 
-        if(@result['results'].count > 3)
+        if(@result['results'].count > 2)
           @message  += "Need more? SMS back M"
         else  
           @message  += "If location not listed? SMS back N"
@@ -311,14 +322,14 @@ class CabRequestsController < ApplicationController
 
     def send_more_locations(driver_reg_session, short_code)
       @result = get_locations(driver_reg_session.searched_location)
-      more_location_count = (driver_reg_session.more_location_count * 3)
+      more_location_count = (driver_reg_session.more_location_count * 2)
 
       if(@result['results'].count > more_location_count)
         @message  = "Please SMS back the correct number of your location \n"
         @session_message  = ""
         location_count = 1
         @result['results'].each_with_index do |address, index|
-          if(index >= (more_location_count - 1) && index < (more_location_count + 2))
+          if(index >= (more_location_count - 1) && index < (more_location_count + 1))
             location = address["address_components"][0]['long_name']
             lat      = get_latitude(address)
             long     = get_longitude(address)
@@ -328,7 +339,7 @@ class CabRequestsController < ApplicationController
           end  
         end
 
-        if(@result['results'].count > (more_location_count + 3))
+        if(@result['results'].count > (more_location_count + 2))
           @message  += "Need more? SMS back M"
         else  
           @message  += "If location not listed? SMS back N"
