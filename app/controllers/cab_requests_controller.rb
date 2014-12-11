@@ -68,6 +68,9 @@ class CabRequestsController < ApplicationController
           @driver_reg_session.delete
           @message = "Please ask near by people for your location name and send message again"
           send_message(@cell_no, @message, @short_code)                            
+        else
+          @message = "You have chosen wrong input. Please send again correct input"
+          send_message(@cell_no, @message, @short_code)                            
         end
 
       end  
