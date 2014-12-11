@@ -59,7 +59,7 @@ class CabRequestsController < ApplicationController
           end  
         end  
 
-        if(@inc_message == "1" || "2" || "3" || 1 || 2 || 3)
+        if(@inc_message == "1" || @inc_message == "2" || @inc_message == "3" || @inc_message == 1 || @inc_message == 2 || @inc_message == 3)
           locations = @driver_reg_session.location.split("-")
           if(@inc_message.to_i > locations.count)
             @message = "You have chosen wrong input. Please send again correct input"
