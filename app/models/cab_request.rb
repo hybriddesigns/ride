@@ -2,42 +2,40 @@ class CabRequest < ActiveRecord::Base
 	belongs_to :driver
 	has_many :driver_lists
 
-       # @cab_requests=CabRequest.where(:user_cell_no=>params[:user_cell_no])
-   public
-    def self.getCabRequests(user_cell_no)
-    	@cab_requests=CabRequest.where(:user_cell_no=>user_cell_no)
-    	return @cab_requests
+  public
+    def self.getCabRequests(customer_cell_no)
+    	CabRequest.where(:customer_cell_no => customer_cell_no)    	 
     end
 
-    def register_request(user_cell_no, lat, long, location)
-    	self.user_cell_no=user_cell_no
-    	self.latitude=lat
-    	self.longitude=long
-    	self.location=location
-    	self.status=false
-    	self.broadcast=false
-    	self.count=0.to_i
+    def register_request(customer_cell_no, lat, long, location)
+    	self.customer_cell_no = customer_cell_no
+    	self.latitude     = lat
+    	self.longitude    = long
+    	self.location     = location
+    	self.status       = false
+    	self.broadcast    = false
+      self.options_flag = false
     	self.save
     end
 
     def lock_choice(lat, long, location)
     	self.update_attribute(:latitude, lat)
-        self.update_attribute(:longitude, long)
-        self.update_attribute(:location, location)
+      self.update_attribute(:longitude, long)
+      self.update_attribute(:location, location)
     end
 
-    def increment_count
-    	@count=self.count+1
-    	self.update_attribute(:count, @count)
+    def update_option_flag
+    	self.update_attribute(:options_flag, true)
     end
 
-    def self.is_new(cell_no)
-      @user=CabRequest.where(:user_cell_no=> cell_no)
-      @old_request=@user.where(:status => false).last
+    def self.is_new(customer_cell_no)
+      @cab_request = CabRequest.where(:customer_cell_no => customer_cell_no)
+      @old_request = @cab_request.where(:status => false).last
       if @old_request.present?
         return false
       else
         return true
       end
     end
+
 end

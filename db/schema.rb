@@ -11,21 +11,22 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20141211082055) do
+ActiveRecord::Schema.define(version: 20141211133520) do
 
   create_table "cab_requests", force: true do |t|
     t.datetime "created_at"
     t.datetime "updated_at"
     t.string   "location"
-    t.float    "latitude",     limit: 24
-    t.float    "longitude",    limit: 24
-    t.integer  "driver_id"
-    t.string   "user_cell_no"
+    t.float    "latitude",           limit: 24
+    t.float    "longitude",          limit: 24
+    t.integer  "current_driver_id"
+    t.string   "customer_cell_no"
     t.boolean  "broadcast"
     t.boolean  "status"
     t.datetime "time_limit"
-    t.integer  "count"
-    t.string   "driver_ids"
+    t.string   "chosen_drivers_ids"
+    t.text     "more_locations"
+    t.boolean  "options_flag"
   end
 
   create_table "driver_lists", force: true do |t|
