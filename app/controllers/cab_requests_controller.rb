@@ -52,7 +52,7 @@ class CabRequestsController < ApplicationController
         if(locations.present?) #Logic for name input
           locations.each_with_index do |location, index|
             location_name = location.split(",")[0]
-            if(location_name.include? @inc_message)
+            if(location_name.eql? @inc_message)
               @inc_message = index + 1
               break
             end  
