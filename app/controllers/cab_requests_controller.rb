@@ -318,7 +318,7 @@ class CabRequestsController < ApplicationController
         @session_message  = ""
         location_count = 1
         @result['results'].each_with_index do |address, index|
-          if(index >= (more_location_count - 1))
+          if(index >= (more_location_count - 1) && index < (more_location_count + 3))
             location = address["address_components"][0]['long_name']
             lat      = get_latitude(address)
             long     = get_longitude(address)
