@@ -314,7 +314,7 @@ class CabRequestsController < ApplicationController
 
 
       else # If location is invalid and no result from Google API
-        message="Entered location is invalid. Please send again."
+        message="Please ask near by people for your location name and send message again"
         send_message(cell_no, message, short_code)        
       end  
 
