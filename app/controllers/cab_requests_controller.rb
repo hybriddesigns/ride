@@ -44,7 +44,7 @@ class CabRequestsController < ApplicationController
         @message="You are already registered in our system. Thank you!"
         send_message(@cell_no, @message, @short_code)
       elsif(!DriverRegistrationRequest.where("cell_no = ?", @cell_no).present?) # 1. Get Location from the sms      
-         @location_to_confirm = driver_register_and_get_location(@cell_no, @inc_message, @short_code)        
+         @location_to_confirm = driver_register_and_get_location(@cell_no, @inc_message, @short_code)
       else #Already Driver Session initiated
         @driver_reg_session = DriverRegistrationRequest.where("cell_no = ?", @cell_no).first
 
@@ -57,9 +57,12 @@ class CabRequestsController < ApplicationController
             chosen_location = locations[@inc_message.to_i - 1].split(",")
             Driver.create(:cell_no => @cell_no, :location_lat => chosen_location[1],  :location_long =>  chosen_location[2], :location =>  chosen_location[0])
             @driver_reg_session.delete
-            @message = "You are registered in the system successfully. Thank you!"
+            @message = "You are registered in the system successfully. Thank you!\nPlease share this info with at least 5 taxi drivers."
             send_message(@cell_no, @message, @short_code)                            
           end  
+
+        elsif(@inc_message == "m" || @inc_message == "M")  
+          send_more_locations(@driver_reg_session, @short_code)
 
         elsif is_no(@inc_message)
           @driver_reg_session.delete
@@ -192,7 +195,7 @@ class CabRequestsController < ApplicationController
 
     def get_locations(user_entered_location)
       # location = user_entered_location #.downcase.split.join('+').delete("'").delete(".").delete(",") #convert string into right form
-      if(user_entered_location.include? "Arat kilo")
+      if user_entered_location.include? "Arat kilo"
         user_entered_location = "4 Kilo"
       end  
       location = user_entered_location.to_s + " Addis Abab Ethiopia"
@@ -255,18 +258,18 @@ class CabRequestsController < ApplicationController
     end
 
     # For Drivers
-    def driver_register_and_get_location(cell_no, location, short_code)
-      @result = get_locations(location)
+    def driver_register_and_get_location(cell_no, searched_location, short_code)
+      @result = get_locations(searched_location)
 
       if(@result['results'].present?)
         # Check if location matchs with google correctly if match register and exit
         @result['results'].each_with_index do |address, index|
           if(index <= 3)
-            if(location.similar(address["formatted_address"]) >= 80.0)
+            if(searched_location.similar(address["formatted_address"]) >= 85.0)
               Driver.create(:cell_no => cell_no, :location_lat => get_latitude(address), :location_long => get_longitude(address), :location => address["formatted_address"])
               @driver_reg_session = DriverRegistrationRequest.where("cell_no = ?", cell_no).first
               @driver_reg_session.delete
-              message="You are registered in the system successfully. Thank you!"
+              message="You are registered in the system successfully. Thank you!\nPlease share this info with at least 5 taxi drivers."
               send_message(cell_no, message, short_code)        
               return
             end  
@@ -274,10 +277,10 @@ class CabRequestsController < ApplicationController
         end
 
         # Check if location not matchs with google correctly
-        @message  = ""
+        @message  = "Please sms back the correct number if your location \n\n"
         @session_message  = ""
         @result['results'].each_with_index do |address, index|
-          if(index <= 3)
+          if(index < 3)
             location = address["address_components"][0]['long_name']
             lat      = get_latitude(address)
             long     = get_longitude(address)
@@ -285,8 +288,15 @@ class CabRequestsController < ApplicationController
             @session_message += location.to_s+","+lat.to_s+","+long.to_s+"-"
           end  
         end
+
+        if(@result['results'].count > 3)
+          @message  += "\nNeed more? SMS back M"
+        else  
+          @message  += "\nIf location not matches? SMS back N"
+        end  
+
         send_message(cell_no, @message, short_code) #Send Message
-        DriverRegistrationRequest.create(:cell_no => cell_no, :location => @session_message.gsub( /.{1}$/, '' ), :active => false)       
+        DriverRegistrationRequest.create(:cell_no => cell_no, :location => @session_message.gsub( /.{1}$/, '' ), :active => false, :more_location_count => 1, :searched_location => searched_location)
 
 
       else # If location is invalid and no result from Google API
@@ -295,6 +305,41 @@ class CabRequestsController < ApplicationController
       end  
 
     end
+
+    def send_more_locations(driver_reg_session, short_code)
+      @result = get_locations(driver_reg_session.searched_location)
+      more_location_count = (driver_reg_session.more_location_count * 3)
+
+      if(@result['results'].count > more_location_count)
+        @message  = "Please sms back the correct number if your location \n"
+        @session_message  = ""
+        location_count = 1
+        @result['results'].each_with_index do |address, index|
+          if(index >= (more_location_count - 1))
+            location = address["address_components"][0]['long_name']
+            lat      = get_latitude(address)
+            long     = get_longitude(address)
+            @message  += (location_count).to_s + "- " + location.to_s + "\n"
+            @session_message += location.to_s+","+lat.to_s+","+long.to_s+"-"
+            location_count += 1
+          end  
+        end
+
+        if(@result['results'].count > (more_location_count + 3))
+          @message  += "\n Need more? SMS back M"
+        else  
+          @message  += "\nIf location not matches? SMS back N"
+        end  
+
+        send_message(driver_reg_session.cell_no, @message, short_code) #Send Message
+        driver_reg_session.update(:location => @session_message.gsub( /.{1}$/, '' ), :more_location_count => (driver_reg_session.more_location_count + 1))
+
+      else
+        driver_reg_session.delete
+        @message = "No more locations. Please ask near by people for your location name and send message again"
+        send_message(@cell_no, @message, @short_code)
+      end  
+    end  
 
     def set_cab_request
       @cab_request = CabRequest.find(params[:id])

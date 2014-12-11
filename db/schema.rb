@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20141210142337) do
+ActiveRecord::Schema.define(version: 20141211082055) do
 
   create_table "cab_requests", force: true do |t|
     t.datetime "created_at"
@@ -42,6 +42,8 @@ ActiveRecord::Schema.define(version: 20141210142337) do
     t.boolean  "active"
     t.datetime "created_at"
     t.datetime "updated_at"
+    t.integer  "more_location_count"
+    t.string   "searched_location"
   end
 
   create_table "drivers", force: true do |t|
@@ -52,6 +54,15 @@ ActiveRecord::Schema.define(version: 20141210142337) do
     t.datetime "created_at"
     t.datetime "updated_at"
     t.string   "cell_no"
+  end
+
+  create_table "send_sms", id: false, force: true do |t|
+    t.string  "momt",     limit: 50, null: false
+    t.string  "sender",   limit: 50, null: false
+    t.string  "receiver", limit: 50, null: false
+    t.text    "msgdata",             null: false
+    t.integer "sms_type",            null: false
+    t.string  "smsc_id",  limit: 50, null: false
   end
 
 end
