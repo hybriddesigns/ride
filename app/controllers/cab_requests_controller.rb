@@ -292,7 +292,7 @@ class CabRequestsController < ApplicationController
         if(@result['results'].count > 3)
           @message  += "\nNeed more? SMS back M"
         else  
-          @message  += "\nIf location not matches? SMS back N"
+          @message  += "\nIf location not listed? SMS back N"
         end  
 
         send_message(cell_no, @message, short_code) #Send Message
@@ -328,7 +328,7 @@ class CabRequestsController < ApplicationController
         if(@result['results'].count > (more_location_count + 3))
           @message  += "\n Need more? SMS back M"
         else  
-          @message  += "\nIf location not matches? SMS back N"
+          @message  += "\nIf location not listed? SMS back N"
         end  
 
         send_message(driver_reg_session.cell_no, @message, short_code) #Send Message
