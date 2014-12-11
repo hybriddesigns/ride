@@ -77,7 +77,7 @@ class CabRequestsController < ApplicationController
 
         elsif is_no(@inc_message)
           @driver_reg_session.delete
-          @message = "Please ask near by people the correct location name and send message again"
+          @message = "Please ask near by people the correct spelling to your location and send message again"
           send_message(@cell_no, @message, @short_code)                            
         else
           @message = "You have chosen wrong input. Please send again correct input"
@@ -314,7 +314,7 @@ class CabRequestsController < ApplicationController
 
 
       else # If location is invalid and no result from Google API
-        message="Please ask near by people the correct location name and send message again"
+        message="Please ask near by people the correct spelling to your location and send message again"
         send_message(cell_no, message, short_code)        
       end  
 
@@ -350,7 +350,7 @@ class CabRequestsController < ApplicationController
 
       else
         driver_reg_session.delete
-        @message = "No more locations. Please ask near by people the correct location name and send message again"
+        @message = "No more locations. Please ask near by people the correct spelling to your location and send message again"
         send_message(@cell_no, @message, @short_code)
       end  
     end  
