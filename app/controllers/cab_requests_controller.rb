@@ -177,7 +177,11 @@ class CabRequestsController < ApplicationController
 
     def get_locations(user_entered_location)
       # location = user_entered_location #.downcase.split.join('+').delete("'").delete(".").delete(",") #convert string into right form
+      if(user_entered_location.include? "Arat kilo")
+        user_entered_location = "4 Kilo"
+      end  
       location = user_entered_location.to_s + " Addis Abab Ethiopia"
+      location = location.gsub!(" ", "+")
       @result  = HTTParty.get(URI::encode(API_BASE_URL + location.to_s + APP_KEY))  
       return @result  
     end
