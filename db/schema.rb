@@ -57,13 +57,4 @@ ActiveRecord::Schema.define(version: 20141211133520) do
     t.string   "cell_no"
   end
 
-  create_table "send_sms", id: false, force: true do |t|
-    t.string  "momt",     limit: 50, null: false
-    t.string  "sender",   limit: 50, null: false
-    t.string  "receiver", limit: 50, null: false
-    t.text    "msgdata",             null: false
-    t.integer "sms_type",            null: false
-    t.string  "smsc_id",  limit: 50, null: false
-  end
-
 end
