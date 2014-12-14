@@ -63,7 +63,7 @@ class CabRequestsController < ApplicationController
         if(@inc_message == "1" || @inc_message == "2" || @inc_message == "3" || @inc_message == 1 || @inc_message == 2 || @inc_message == 3)
           locations = @driver_reg_session.location.split("-")
           if(@inc_message.to_i > locations.count)
-            @message = "You have chosen wrong input. Please send again correct input"
+            @message = "Please SMS back the right spelling from the given list or simply SMS back the number corresponding to your choice."
             send_message(@cell_no, @message, @short_code) # 0. Kick out request if driver send wrong option
           else
             chosen_location = locations[@inc_message.to_i - 1].split(",")
@@ -93,6 +93,10 @@ class CabRequestsController < ApplicationController
       @cell_no     = _cell_no
       @inc_message = _inc_message
       @short_code  = _short_code
+
+      @message = "Our system is under development and will complete in a week. Please try later."
+      send_message(@cell_no, @message, @short_code)
+      return
 
       if (@inc_message == "" || nil) # -1. Check message is empty or not
         @message = "Please SMS your location."
