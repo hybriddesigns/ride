@@ -6,7 +6,7 @@ development:
   host: 127.0.0.1
   pool: 5
   username: root
-  password: 
+  password: root
 
 test:
   adapter: mysql
@@ -16,7 +16,7 @@ test:
   host: 127.0.0.1
   pool: 5
   username: root
-  password: 
+  password: root
 
 
 production:

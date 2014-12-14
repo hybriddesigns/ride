@@ -9,6 +9,7 @@ class CabRequestsController < ApplicationController
     cell_no     = params[:phone]
     inc_message = params[:message]
     short_code  = params[:shortcode]
+    
 
     if(short_code == "+2518812")
       receive_sms_for_driver_registration(cell_no, inc_message, "8812")
@@ -117,7 +118,7 @@ class CabRequestsController < ApplicationController
             @message = 'Thankyou for using Ride. Your request is succesfully delivered nearest taxi. If you do not receive a call within 7 mins Or need to talk another driver, Please text "Next" to 8208'
             send_message(@cell_no, @message, @short_code)
 
-          elsif is_option_selected(@inc_message) #if some option has been selected
+          elsif is_option_selected(@inc_message) && @cab_request.locations.present? #if some option has been selected
             lock_location_choice_for_ride(@cab_request, @inc_message, @short_code) #lock the choice (1 to 100)
 
           elsif (@inc_message == "Next" || @inc_message == "NEXT" || @inc_message == "next")
@@ -133,13 +134,21 @@ class CabRequestsController < ApplicationController
         @driver = Driver.where(:cell_no => @cell_no).first
         if is_yes(@inc_message)
           @cab_request  = CabRequest.where(:current_driver_id => @driver.id).where(:status=>false).last
-          @message = "Here we go... Your customer lives near "+@cab_request.location.to_s+". You must call him/her in 2 mins. Customer phone number: "+@cab_request.customer_cell_no.to_s
-          send_message(@driver.cell_no, @message, @short_code)
-          @driver.confirm_deal
+            if @cab_request.present?
+              @message = "Here we go... Your customer lives near "+@cab_request.location.to_s+". You must call him/her in 2 mins. Customer phone number: "+@cab_request.customer_cell_no.to_s
+              send_message(@driver.cell_no, @message, @short_code)
+              @driver.confirm_deal
+            elsif (!present_in_broadcasted_drivers(@driver)) 
+              @message = "You have send an invalid input."
+              send_message(@driver.cell_no, @message, @short_code) 
+            else
+              @message = "You have send an invalid input."
+              send_message(@driver.cell_no, @message, @short_code)
+            end
         elsif is_no(@inc_message)
           ping_next_driver(@driver.id, @short_code)
         else
-          @message = "You have send invalid input."
+          @message = "You have send an invalid input."
           send_message(@driver.cell_no, @message, @short_code)
         end
       end  
@@ -228,7 +237,6 @@ class CabRequestsController < ApplicationController
 
     def contact_nearby_drivers(cab_request)
       @drivers = Driver.within(50, :origin => [cab_request.latitude, cab_request.longitude]).limit(50)
-
       @drivers_ids = ""
       if(@drivers.present?)
         @drivers.each_with_index do |driver, index|
@@ -360,6 +368,34 @@ class CabRequestsController < ApplicationController
         send_message(@cell_no, @message, @short_code)
       end  
     end  
+
+    def present_in_broadcasted_drivers(driver)
+      @cab_requests=CabRequest.where(:status=>false, :broadcast=>true)
+      @cab_request=nil #the cab request needed
+      @cab_requests.each do |cab_request|
+        @drivers_ids  = cab_request.chosen_drivers_ids #get comma seperated ids of drivers
+         if(!@drivers_ids.empty?)
+           @drivers_ids  = @drivers_ids.split(",") #converts to array
+           @drivers_ids.each do |driver_id| 
+                 
+            if driver.id == driver_id.to_i
+              @cab_request=cab_request
+            end
+           end
+         end
+      end
+      if @cab_request.present?
+        @cab_request.update_attributes(:status => true)
+        @cab_request.update_attributes(:current_driver_id => driver.id)
+        @message = "Here we go... Your customer lives near "+@cab_request.location.to_s+". You must call him/her in 2 mins. Customer phone number: "+@cab_request.customer_cell_no.to_s
+        send_message(driver.cell_no, @message, @short_code) 
+        driver.confirm_deal
+      else
+        return nil
+      end
+
+
+    end
 
     ######### Methods Related To Location API #########
     def get_locations(user_entered_location)
