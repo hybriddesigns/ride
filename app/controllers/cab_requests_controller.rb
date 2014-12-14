@@ -79,6 +79,7 @@ class CabRequestsController < ApplicationController
           @driver_reg_session.delete
           @message = "Please ask near by people the correct spelling to your location and send message again"
           send_message(@cell_no, @message, @short_code)                            
+
         else
           @message = "You have chosen wrong input. Please send again correct input"
           send_message(@cell_no, @message, @short_code)                            
@@ -119,6 +120,9 @@ class CabRequestsController < ApplicationController
           elsif is_option_selected(@inc_message) #if some option has been selected
             lock_location_choice_for_ride(@cab_request, @inc_message, @short_code) #lock the choice (1 to 100)
 
+          elsif (@inc_message == "Next" || @inc_message == "NEXT" || @inc_message == "next")
+            @cab_request.update_attributes(:broadcast => true)
+            broadcast_to_all_driver(cab_request, @short_code)
           else
             @message = "You have chosen wrong input. Please send again correct input"
             send_message(@cell_no, @message, @short_code)
@@ -258,6 +262,18 @@ class CabRequestsController < ApplicationController
         @message = "Sorry, Taxi is not available in this area for now. Please try later."
         send_message(@cab_request.customer_cell_no, @message, short_code)        
         @cab_request.delete
+      end
+    end
+
+    def broadcast_to_all_driver(cab_request, short_code)
+      @drivers_ids  = @cab_request.chosen_drivers_ids #get comma seperated ids of drivers
+      if(!@drivers_ids.empty?)
+        @drivers_ids  = @drivers_ids.split(",") #converts to array
+        @drivers_ids.each do |driver|
+          current_driver = Driver.find(driver.id) #Pick next driver
+          @message = 'Surprise! We found you a new taxi customer. Would you like to take the request? SMS "Y" for Yes, "N" for No'
+          send_message(current_driver.cell_no, @message, short_code)        
+        end  
       end
     end
 
