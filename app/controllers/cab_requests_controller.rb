@@ -118,15 +118,16 @@ class CabRequestsController < ApplicationController
 
           elsif (is_yes(@inc_message) && @cab_request.options_flag == false) #user agrees
             contact_nearby_drivers(@cab_request)
-            @message = 'Thankyou for using Ride. Your request is succesfully delivered nearest taxi. If you do not receive a call within 7 mins Or need to talk another driver, Please text "Next" to 8208'
+            @message = 'Congrats! Your request is sent to a nearby taxi. If you do not get a call within 7 mins, please SMS next.'
             send_message(@cell_no, @message, @short_code)
-
-          elsif is_option_selected(@inc_message) && @cab_request.locations.present? #if some option has been selected
-            lock_location_choice_for_ride(@cab_request, @inc_message, @short_code) #lock the choice (1 to 100)
 
           elsif (@inc_message == "Next" || @inc_message == "NEXT" || @inc_message == "next")
             @cab_request.update_attributes(:broadcast => true)
             broadcast_to_all_driver(cab_request, @short_code)
+
+          elsif is_option_selected(@inc_message) && @cab_request.locations.present? #if some option has been selected
+            lock_location_choice_for_ride(@cab_request, @inc_message, @short_code) #lock the choice (1 to 100)
+
           else
             @message = "You have chosen wrong input. Please send again correct input"
             send_message(@cell_no, @message, @short_code)
@@ -228,7 +229,7 @@ class CabRequestsController < ApplicationController
       else
         chosen_location = locations[choice.to_i - 1].split(",")
         cab_request.lock_choice(chosen_location[1], chosen_location[2], chosen_location[0]) # lat, long, location
-        @message = 'Thankyou for using Ride. Your request is succesfully delivered nearest taxi. If you do not receive a call within 7 mins Or need to talk another driver, Please text "Next" to 8208'
+        @message = 'Congrats! Your request is sent to a nearby taxi. If you do not get a call within 7 mins, please SMS next.'
         send_message(@cell_no, @message, @short_code)
         contact_nearby_drivers(cab_request) #contact nearby drivers of the user selected location
       end  

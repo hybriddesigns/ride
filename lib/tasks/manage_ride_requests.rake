@@ -44,7 +44,7 @@ namespace :events do
         @driver_ids = @driver_ids.join(",")
         cab_request.update_attribute(:chosen_drivers_ids, @driver_ids)
       else
-        @message = "Sorry there are no drivers available. Please try again later"
+        @message = "Sorry, Taxi is not available in this area for now. Please try later."
         send_message(cab_request.customer_cell_no, @message, @short_code)
         cab_request.delete
       end
