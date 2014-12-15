@@ -125,7 +125,7 @@ class CabRequestsController < ApplicationController
             @cab_request.update_attributes(:broadcast => true)
             broadcast_to_all_driver(cab_request, @short_code)
 
-          elsif is_option_selected(@inc_message) && @cab_request.locations.present? #if some option has been selected
+          elsif ((@inc_message == "1" || @inc_message == "2" || @inc_message == "3" || @inc_message == 1 || @inc_message == 2 || @inc_message == 3) && @cab_request.more_locations.present?) #if some option has been selected
             lock_location_choice_for_ride(@cab_request, @inc_message, @short_code) #lock the choice (1 to 100)
 
           else
@@ -236,8 +236,6 @@ class CabRequestsController < ApplicationController
         contact_nearby_drivers(cab_request) #contact nearby drivers of the user selected location
       end  
     end
-
-
 
     def contact_nearby_drivers(cab_request)
       # @drivers = Driver.by_distance(:origin => [cab_request.latitude, cab_request.longitude]).limit(50)

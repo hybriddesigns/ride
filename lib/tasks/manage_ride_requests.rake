@@ -9,7 +9,7 @@ namespace :events do
     puts "Check cab requests of 5 minutes old and not responded. Broadcasting to near drivers" 
     puts (Time.now).to_s + @passed_time.to_s
 
-    @cab_requests = CabRequest.where(:status=>false, :broadcast=>false).where("created_at < ?", @passed_time)
+    @cab_requests = CabRequest.where(:status => false, :broadcast => false, :ordered => true).where("created_at < ?", @passed_time)
     @cab_requests.each do |cab_request|
     	#send broadcast to all remaining drivers
       @drivers_ids  = cab_request.chosen_drivers_ids
@@ -30,7 +30,7 @@ namespace :events do
     puts "Check cab requests of 1 minutes and not responded by the chosen driver" 
     puts (Time.now).to_s + @passed_time.to_s
 
-    @cab_requests = CabRequest.where(:status=>false, :broadcast=>false).where("updated_at < ?", @passed_time)
+    @cab_requests = CabRequest.where(:status=>false, :broadcast=>false, :ordered => true).where("updated_at < ?", @passed_time)
     @cab_requests.each do |cab_request|
       if cab_request.chosen_drivers_ids.present?  
       	@driver_ids = cab_request.chosen_drivers_ids

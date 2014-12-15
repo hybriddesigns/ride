@@ -15,13 +15,12 @@ class CabRequest < ActiveRecord::Base
     	self.status       = false
     	self.broadcast    = false
       self.options_flag = false
+      self.ordered      = false
     	self.save
     end
 
     def lock_choice(lat, long, location)
-    	self.update_attribute(:latitude, lat)
-      self.update_attribute(:longitude, long)
-      self.update_attribute(:location, location)
+    	self.update_attribute(:latitude => lat, :longitude => long, :location => location, :ordered => true)
     end
 
     def update_option_flag
