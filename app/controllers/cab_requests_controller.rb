@@ -108,7 +108,6 @@ class CabRequestsController < ApplicationController
         else # old call
           @cab_request = CabRequest.getCabRequests(@cell_no).where(:status=>false).last #get pending request of this user
           if is_no(@inc_message) # user rejects the location
-
             if (!@cab_request.options_flag) # first time rejection
               send_more_locations_to_customer(@cab_request, @short_code) #send more options
             else # on rejection twice. delete the request and show "ask others" message
@@ -182,7 +181,7 @@ class CabRequestsController < ApplicationController
         @location_to_confirm = @result["results"][0]["address_components"][0]['long_name']
         @cab_request = CabRequest.new
         @cab_request.register_request(customer_cell_no, lat, long, location)
-        @message   = '"Is your pick-up location "('+@location_to_confirm+')?" SMS Y for Yes, N for No'
+        @message   = '"Is your pick-up location "'+@location_to_confirm+'?" SMS Y for Yes, N for No'
         send_message(customer_cell_no, @message, short_code)        
       else # If location is invalid and no result from Google API
         @message = "Please ask near by people the correct spelling to your location and send message again"
@@ -210,7 +209,7 @@ class CabRequestsController < ApplicationController
         @message  += "If location not listed? SMS back N"
         send_message(cab_request.customer_cell_no, @message, short_code) #Send Message
       else
-        @message = "No more locations. Please ask near by people the correct spelling to your location and send message again"
+        @message = "Please ask near by people the correct spelling to your location and send message again, Or try different name to the location"
         send_message(cab_request.customer_cell_no, @message, @short_code)
         cab_request.delete
       end  
