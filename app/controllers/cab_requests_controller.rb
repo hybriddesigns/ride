@@ -150,7 +150,9 @@ class CabRequestsController < ApplicationController
               send_message(@driver.cell_no, @message, @short_code)
             end
         elsif is_no(@inc_message)
-          ping_next_driver(@driver.id, @short_code)
+          @message = "Your turn is given to another driver. Thank you for helping another fellow RIDE driver :)"
+          send_message(@driver.cell_no, @message, @short_code)
+          ping_next_driver(@driver.id, @short_code)          
         else
           @message = "You have send an invalid input."
           send_message(@driver.cell_no, @message, @short_code)
@@ -182,7 +184,7 @@ class CabRequestsController < ApplicationController
         @location_to_confirm = @result["results"][0]["address_components"][0]['long_name']
         @cab_request = CabRequest.new
         @cab_request.register_request(customer_cell_no, lat, long, location)
-        @message   = '"Is your pick-up location "'+@location_to_confirm+'?" SMS Y for Yes, N for No'
+        @message   = 'Is your pick-up location "'+@location_to_confirm+'?" SMS Y for Yes, N for No'
         send_message(customer_cell_no, @message, short_code)        
       else # If location is invalid and no result from Google API
         @message = "Please ask near by people the correct spelling to your location and send message again"
