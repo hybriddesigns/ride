@@ -14,6 +14,4 @@ every 1.minute  do
   rake "events:fetch"
 end
 
-
 # Learn more: http://github.com/javan/whenever
-

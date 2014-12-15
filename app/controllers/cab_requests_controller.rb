@@ -53,7 +53,7 @@ class CabRequestsController < ApplicationController
         if(locations.present?) #Logic for name input
           locations.each_with_index do |location, index|
             location_name = location.split(",")[0]
-            if(location_name.eql? @inc_message)
+            if(location_name.casecmp(@inc_message) == 0) #string compare regardless of string case
               @inc_message = (index + 1).to_s
               break
             end  
@@ -82,7 +82,7 @@ class CabRequestsController < ApplicationController
           send_message(@cell_no, @message, @short_code)                            
 
         else
-          @message = "You have chosen wrong input. Please send again correct input"
+          @message = "Please SMS back the right spelling from the given list or simply SMS back the number corresponding to your choice."
           send_message(@cell_no, @message, @short_code)                            
         end
 
@@ -94,9 +94,9 @@ class CabRequestsController < ApplicationController
       @inc_message = _inc_message
       @short_code  = _short_code
 
-      @message = "Our system is under development and will complete in a week. Please try later."
-      send_message(@cell_no, @message, @short_code)
-      return
+      # @message = "Our system is under development and will complete in a week. Please try later."
+      # send_message(@cell_no, @message, @short_code)
+      # return
 
       if (@inc_message == "" || nil) # -1. Check message is empty or not
         @message = "Please SMS your location."
@@ -240,7 +240,7 @@ class CabRequestsController < ApplicationController
 
 
     def contact_nearby_drivers(cab_request)
-      @drivers = Driver.within(50, :origin => [cab_request.latitude, cab_request.longitude]).limit(50)
+      @drivers = Driver.by_distance(:origin => [cab_request.latitude, cab_request.longitude]).limit(50)
       @drivers_ids = ""
       if(@drivers.present?)
         @drivers.each_with_index do |driver, index|
@@ -397,8 +397,6 @@ class CabRequestsController < ApplicationController
       else
         return nil
       end
-
-
     end
 
     ######### Methods Related To Location API #########
