@@ -293,7 +293,7 @@ class CabRequestsController < ApplicationController
         #Send message to first driver
         @message = "Surprise! We found you a new taxi customer. Would you like to take the request? SMS 'Y' for Yes, 'N' for No"
         send_message(@drivers.first.cell_no, @message, @short_code)        
-        cab_request.update_attributes(:current_driver_id => @drivers.first.id, :chosen_drivers_ids => @drivers_ids.gsub(/.{1}$/, '', :offer_count => (cab_request.offer_count+1)))
+        cab_request.update_attributes(:current_driver_id => @drivers.first.id, :chosen_drivers_ids => @drivers_ids.gsub(/.{1}$/, ''), :offer_count => (cab_request.offer_count+1))
       else #If driver not available in the locality
         @message = "All our drivers are busy at this time assisting other customers. Please try again in a few mins. FYI: We are registering more drivers now."
         send_message(@cell_no, @message, @short_code)   
