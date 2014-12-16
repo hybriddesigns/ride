@@ -9,12 +9,12 @@ namespace :events do
     puts "Check cab requests of 5 minutes old and not responded. Broadcasting to near drivers" 
     puts (Time.now).to_s + @passed_time.to_s
 
-    @cab_requests = CabRequest.where(:status => false, :broadcast => true, :ordered => true).where("created_at < ?", @passed_time)
+    @cab_requests = CabRequest.where(:status => false, :broadcast => true, :broadcasted => false, :ordered => true).where("created_at < ?", @passed_time)
     @cab_requests.each do |cab_request|
     	#send broadcast to all remaining drivers
       @drivers_ids  = cab_request.chosen_drivers_ids
       if @drivers_ids.present?
-      	cab_request.update_attribute(:broadcast, true)
+      	cab_request.update_attribute(:broadcasted, true)
         @drivers_ids = @drivers_ids.split(",")
         @drivers_ids.each do |driver_id|
           @driver  = Driver.find(driver_id)
@@ -27,6 +27,19 @@ namespace :events do
         cab_request.delete
       end
     end
+
+
+    @short_code   = "+2518202"
+    @passed_time  = Time.now - 2.minutes
+
+    @cab_requests = CabRequest.where(:status => false, :broadcast => true, :broadcasted => true, :ordered => true).where("updated_at < ?", @passed_time)
+    @cab_requests.each do |cab_request|
+      #send broadcast to all remaining drivers
+      @message = "All our drivers are busy at this time assisting other customers. Please try again in a few mins. FYI: We are registering more drivers now."
+      send_message(cab_request.customer_cell_no, @message, @short_code)
+      cab_request.delete
+    end
+
 
     @passed_time  = Time.now - 1.minutes
     puts "Check cab requests of 1 minutes and not responded by the chosen driver" 

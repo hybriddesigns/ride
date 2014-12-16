@@ -18,6 +18,7 @@ class CabRequest < ActiveRecord::Base
       self.ordered      = false
       self.location_selected = false
       self.offer_count = 0
+      self.broadcasted = false
     	self.save
     end
 
