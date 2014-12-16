@@ -20,11 +20,11 @@ class CabRequest < ActiveRecord::Base
     end
 
     def lock_choice(lat, long, location)
-    	self.update_attribute(:latitude => lat, :longitude => long, :location => location, :ordered => true)
+    	self.update_attributes(:latitude => lat, :longitude => long, :location => location, :ordered => true)
     end
 
     def update_option_flag
-    	self.update_attribute(:options_flag, true)
+    	self.update_attributes(:options_flag => true)
     end
 
     def self.is_new(customer_cell_no)

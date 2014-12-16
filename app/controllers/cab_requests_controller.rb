@@ -107,6 +107,18 @@ class CabRequestsController < ApplicationController
           register_customer_and_get_location(@cell_no, @inc_message, @short_code) #location to show
         else # old call
           @cab_request = CabRequest.getCabRequests(@cell_no).where(:status=>false).last #get pending request of this user
+          if(@cab_request.options_flag)
+            locations = @cab_request.more_locations.split("-")          
+            if(locations.present?) #Logic for name input
+              locations.each_with_index do |location, index|
+                location_name = location.split(",")[0]
+                if(location_name.casecmp(@inc_message) == 0) #string compare regardless of string case
+                  @inc_message = (index + 1).to_s
+                  break
+                end  
+              end  
+            end  
+          end  
           if is_no(@inc_message) # user rejects the location
             if (!@cab_request.options_flag) # first time rejection
               send_more_locations_to_customer(@cab_request, @short_code) #send more options
@@ -238,9 +250,9 @@ class CabRequestsController < ApplicationController
     end
 
     def contact_nearby_drivers(cab_request)
-      # @drivers = Driver.by_distance(:origin => [cab_request.latitude, cab_request.longitude]).limit(50)
+      @drivers = Driver.by_distance(:origin => [cab_request.latitude, cab_request.longitude]).limit(50)
       #Testing
-      @drivers = Driver.where("cell_no IN ('+251929104455', '+251913135534', '+251938483821')")
+      # @drivers = Driver.where("cell_no IN ('+251929104455', '+251913135534', '+251938483821')")
       #Testing
       @drivers_ids = ""
 
