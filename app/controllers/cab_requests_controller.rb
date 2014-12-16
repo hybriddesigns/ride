@@ -138,7 +138,9 @@ class CabRequestsController < ApplicationController
 
           elsif (@inc_message == "Next" || @inc_message == "NEXT" || @inc_message == "next")
             @cab_request.update_attributes(:broadcast => true)
-            broadcast_to_all_driver(cab_request, @short_code)
+            @message = 'Sorry for the delay! Looks like our drivers are busy assisting other customers. We have put your number in priority considering the delay.'
+            send_message(@cell_no, @message, @short_code)
+            broadcast_to_all_driver(@cab_request, @short_code)
 
           elsif ((@inc_message == "1" || @inc_message == "2" || @inc_message == "3" || @inc_message == 1 || @inc_message == 2 || @inc_message == 3) && @cab_request.more_locations.present?) #if some option has been selected
             lock_location_choice_for_ride(@cab_request, @inc_message, @short_code) #lock the choice (1 to 100)
