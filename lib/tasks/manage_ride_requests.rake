@@ -49,7 +49,19 @@ namespace :events do
         cab_request.delete
       end
     end
- end
+
+    @passed_time  = Time.now - 1.hours
+    puts "Check cab requests 1 hours old and remove them" 
+    puts (Time.now).to_s + @passed_time.to_s
+
+    @cab_requests = CabRequest.where(:ordered => false).where("updated_at < ?", @passed_time)
+    @cab_requests.each do |cab_request|
+      @message = "Your request at ride is canceled because you took an hour to reply. To order again, pls SMS your location."
+      send_message(cab_request.customer_cell_no, @message, @short_code)
+      cab_request.delete
+    end
+
+  end
 end
 
 def send_message(cell_no, message, short_code)
