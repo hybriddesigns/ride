@@ -144,7 +144,7 @@ class CabRequestsController < ApplicationController
             @cab_request.update_attributes(:broadcast => true)
             @message = 'Sorry for the delay! Looks like our drivers are busy assisting other customers. We have put your number in priority considering the delay.'
             send_message(@cell_no, @message, @short_code)
-            broadcast_to_all_driver(@cab_request, @short_code)
+            # broadcast_to_all_driver(@cab_request, @short_code)
 
           elsif ((@inc_message == "1" || @inc_message == "2" || @inc_message == "3" || @inc_message == 1 || @inc_message == 2 || @inc_message == 3) && @cab_request.more_locations.present?) #if some option has been selected
             lock_location_choice_for_ride(@cab_request, @inc_message, @short_code) #lock the choice (1 to 100)
@@ -293,7 +293,7 @@ class CabRequestsController < ApplicationController
         #Send message to first driver
         @message = "Surprise! We found you a new taxi customer. Would you like to take the request? SMS 'Y' for Yes, 'N' for No"
         send_message(@drivers.first.cell_no, @message, @short_code)        
-        cab_request.update_attributes(:current_driver_id => @drivers.first.id, :chosen_drivers_ids => @drivers_ids.gsub(/.{1}$/, ''))
+        cab_request.update_attributes(:current_driver_id => @drivers.first.id, :chosen_drivers_ids => @drivers_ids.gsub(/.{1}$/, '', :offer_count => (cab_request.offer_count+1)))
       else #If driver not available in the locality
         @message = "All our drivers are busy at this time assisting other customers. Please try again in a few mins. FYI: We are registering more drivers now."
         send_message(@cell_no, @message, @short_code)   
@@ -309,7 +309,7 @@ class CabRequestsController < ApplicationController
         current_driver = Driver.find(@drivers_ids[0]) #Pick next driver
         @drivers_ids.shift #pops the first one out
         @drivers_ids  = @drivers_ids.join(",") #convert back to comma seperated string
-        @cab_request.update_attributes(:current_driver_id => current_driver.id, :chosen_drivers_ids => @drivers_ids) #stores the current first id
+        @cab_request.update_attributes(:current_driver_id => current_driver.id, :chosen_drivers_ids => @drivers_ids, :offer_count => (@cab_request.offer_count+1)) #stores the current first id
         @message = "Surprise! We found you a new taxi customer. Would you like to take the request? SMS 'Y' for Yes, 'N' for No"
         send_message(current_driver.cell_no, @message, short_code)        
       else
