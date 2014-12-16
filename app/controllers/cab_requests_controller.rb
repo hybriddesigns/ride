@@ -140,7 +140,7 @@ class CabRequestsController < ApplicationController
             @message = 'Your RIDE is being arranged now. To COMPLETE ur order, If u agree to our terms, SMS Back A. To read our terms, SMS T before u complete the order.'
             send_message(@cell_no, @message, @short_code)
 
-          elsif (@inc_message == "Next" || @inc_message == "NEXT" || @inc_message == "next")
+          elsif ((@cab_request.ordered) && (@inc_message == "Next" || @inc_message == "NEXT" || @inc_message == "next"))
             @cab_request.update_attributes(:broadcast => true)
             @message = 'Sorry for the delay! Looks like our drivers are busy assisting other customers. We have put your number in priority considering the delay.'
             send_message(@cell_no, @message, @short_code)
@@ -278,9 +278,9 @@ class CabRequestsController < ApplicationController
     end
 
     def contact_nearby_drivers(cab_request)
-      # @drivers = Driver.by_distance(:origin => [cab_request.latitude, cab_request.longitude]).limit(50)
+      @drivers = Driver.by_distance(:origin => [cab_request.latitude, cab_request.longitude]).limit(50)
       #Testing
-      @drivers = Driver.where("cell_no IN ('+251929104455', '+251913135534', '+251938483821')")
+      # @drivers = Driver.where("cell_no IN ('+251929104455', '+251913135534', '+251938483821')")
       #Testing
       @drivers_ids = ""
 
@@ -320,7 +320,7 @@ class CabRequestsController < ApplicationController
     end
 
     def broadcast_to_all_driver(cab_request, short_code)
-      @drivers_ids  = @cab_request.chosen_drivers_ids #get comma seperated ids of drivers
+      @drivers_ids  = cab_request.chosen_drivers_ids #get comma seperated ids of drivers
       if(!@drivers_ids.empty?)
         @drivers_ids  = @drivers_ids.split(",") #converts to array
         @drivers_ids.each do |driver|
