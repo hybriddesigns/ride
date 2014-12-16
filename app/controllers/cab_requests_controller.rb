@@ -324,7 +324,7 @@ class CabRequestsController < ApplicationController
       if(!@drivers_ids.empty?)
         @drivers_ids  = @drivers_ids.split(",") #converts to array
         @drivers_ids.each do |driver|
-          current_driver = Driver.find(driver.id) #Pick next driver
+          current_driver = Driver.find(driver.to_i) #Pick next driver
           @message = "Surprise! We found you a new taxi customer. Would you like to take the request? SMS 'Y' for Yes, 'N' for No"
           send_message(current_driver.cell_no, @message, short_code)        
         end  
