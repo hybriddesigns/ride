@@ -107,6 +107,7 @@ class CabRequestsController < ApplicationController
           register_customer_and_get_location(@cell_no, @inc_message, @short_code) #location to show
         else # old call
           @cab_request = CabRequest.getCabRequests(@cell_no).where(:status=>false).last #get pending request of this user
+
           if(@cab_request.options_flag)
             locations = @cab_request.more_locations.split("-")          
             if(locations.present?) #Logic for name input
@@ -119,7 +120,25 @@ class CabRequestsController < ApplicationController
               end  
             end  
           end  
-          if is_no(@inc_message) # user rejects the location
+
+          if(@cab_request.location_selected)
+            if(@inc_message == "A" || @inc_message == "a")
+              @cab_request.update_attributes(:ordered => true)
+              contact_nearby_drivers(@cab_request)
+              @message = 'Congrats! Your request is sent to a nearby taxi. If you do not get a call within 7 mins, please SMS next.'
+              send_message(@cell_no, @message, @short_code)
+            elsif(@inc_message == "t" || @inc_message == "T")
+              @message = 'Terms| by completing order u agree that we pass ur phone no. to a Taxi service provider, and upon Court order to authorities if requested. Sms m for more...'
+              send_message(@cell_no, @message, @short_code)
+            elsif(@inc_message == "m" || @inc_message == "M")
+              @message = 'Ride doesn\'t employ any taxi driver and Is not liable to driver\'s actions but we\'ll fully cooperate with legal authorities to resolve dispute at the expense of accuser. SMS A if u agree to terms'
+              send_message(@cell_no, @message, @short_code)
+            else
+              @message = "Please SMS A to complete your order."
+              send_message(@cell_no, @message, @short_code)
+            end  
+
+          elsif is_no(@inc_message) # user rejects the location
             if (!@cab_request.options_flag) # first time rejection
               send_more_locations_to_customer(@cab_request, @short_code) #send more options
             else # on rejection twice. delete the request and show "ask others" message
@@ -129,8 +148,9 @@ class CabRequestsController < ApplicationController
             end       
 
           elsif (is_yes(@inc_message) && @cab_request.options_flag == false) #user agrees
-            contact_nearby_drivers(@cab_request)
-            @message = 'Congrats! Your request is sent to a nearby taxi. If you do not get a call within 7 mins, please SMS next.'
+            #Add Terms & Conditions
+            @cab_request.update_attributes(:location_selected => true)
+            @message = 'Your RIDE is being arranged now. To COMPLETE ur order, If u agree to our terms, SMS Back A. To read our terms, SMS T before u complete the order.'
             send_message(@cell_no, @message, @short_code)
 
           elsif (@inc_message == "Next" || @inc_message == "NEXT" || @inc_message == "next")
@@ -196,7 +216,7 @@ class CabRequestsController < ApplicationController
         @location_to_confirm = @result["results"][0]["address_components"][0]['long_name']
         @cab_request = CabRequest.new
         @cab_request.register_request(customer_cell_no, lat, long, location)
-        @message   = 'Is your pick-up location "'+@location_to_confirm+'?" SMS Y for Yes, N for No'
+        @message   = "Is your pick-up location '"+@location_to_confirm+"?' SMS Y for Yes, N for No"
         send_message(customer_cell_no, @message, short_code)        
       else # If location is invalid and no result from Google API
         @message = "Please ask near by people the correct spelling to your location and send message again"
@@ -232,7 +252,7 @@ class CabRequestsController < ApplicationController
     end
 
     def send_message(cell_no, message, short_code)
-      Driver.connection.execute("INSERT INTO send_sms (momt, sender, receiver, msgdata, sms_type, smsc_id) VALUES ('MT','"+short_code+"','"+ cell_no+"','"+message+"',2,'"+short_code+"')")
+      Driver.connection.execute("INSERT INTO send_sms (momt, sender, receiver, msgdata, sms_type, smsc_id) VALUES (\"MT\",\""+short_code+"\",\""+ cell_no+"\",\""+message+"\",2,\""+short_code+"\")")
     end
 
     def lock_location_choice_for_ride(cab_request, choice, short_code)
@@ -243,16 +263,16 @@ class CabRequestsController < ApplicationController
       else
         chosen_location = locations[choice.to_i - 1].split(",")
         cab_request.lock_choice(chosen_location[1], chosen_location[2], chosen_location[0]) # lat, long, location
-        @message = 'Congrats! Your request is sent to a nearby taxi. If you do not get a call within 7 mins, please SMS next.'
+        #Add Terms & Conditions
+        @message = 'Your RIDE is being arranged now. To COMPLETE ur order, If u agree to our terms, SMS Back A. To read our terms, SMS T before u complete the order.'
         send_message(@cell_no, @message, @short_code)
-        contact_nearby_drivers(cab_request) #contact nearby drivers of the user selected location
       end  
     end
 
     def contact_nearby_drivers(cab_request)
-      # @drivers = Driver.by_distance(:origin => [cab_request.latitude, cab_request.longitude]).limit(50)
+      @drivers = Driver.by_distance(:origin => [cab_request.latitude, cab_request.longitude]).limit(50)
       #Testing
-      @drivers = Driver.where("cell_no IN ('+251929104455', '+251913135534', '+251938483821')")
+      # @drivers = Driver.where("cell_no IN ('+251929104455', '+251913135534', '+251938483821')")
       #Testing
       @drivers_ids = ""
 
@@ -263,7 +283,7 @@ class CabRequestsController < ApplicationController
           end  
         end  
         #Send message to first driver
-        @message = 'Surprise! We found you a new taxi customer. Would you like to take the request? SMS "Y" for Yes, "N" for No' 
+        @message = "Surprise! We found you a new taxi customer. Would you like to take the request? SMS 'Y' for Yes, 'N' for No"
         send_message(@drivers.first.cell_no, @message, @short_code)        
         cab_request.update_attributes(:current_driver_id => @drivers.first.id, :chosen_drivers_ids => @drivers_ids.gsub(/.{1}$/, ''))
       else #If driver not available in the locality
@@ -282,7 +302,7 @@ class CabRequestsController < ApplicationController
         @drivers_ids.shift #pops the first one out
         @drivers_ids  = @drivers_ids.join(",") #convert back to comma seperated string
         @cab_request.update_attributes(:current_driver_id => current_driver.id, :chosen_drivers_ids => @drivers_ids) #stores the current first id
-        @message = 'Surprise! We found you a new taxi customer. Would you like to take the request? SMS "Y" for Yes, "N" for No'
+        @message = "Surprise! We found you a new taxi customer. Would you like to take the request? SMS 'Y' for Yes, 'N' for No"
         send_message(current_driver.cell_no, @message, short_code)        
       else
         @message = "Sorry all the drivers are busy now. Please try later."
@@ -297,7 +317,7 @@ class CabRequestsController < ApplicationController
         @drivers_ids  = @drivers_ids.split(",") #converts to array
         @drivers_ids.each do |driver|
           current_driver = Driver.find(driver.id) #Pick next driver
-          @message = 'Surprise! We found you a new taxi customer. Would you like to take the request? SMS "Y" for Yes, "N" for No'
+          @message = "Surprise! We found you a new taxi customer. Would you like to take the request? SMS 'Y' for Yes, 'N' for No"
           send_message(current_driver.cell_no, @message, short_code)        
         end  
       end
@@ -346,7 +366,7 @@ class CabRequestsController < ApplicationController
 
 
       else # If location is invalid and no result from Google API
-        message="Please ask near by people the correct spelling to your location and send message again"
+        message = "Please ask near by people the correct spelling to your location and send message again"
         send_message(cell_no, message, short_code)        
       end  
 

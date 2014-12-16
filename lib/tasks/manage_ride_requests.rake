@@ -18,7 +18,7 @@ namespace :events do
         @drivers_ids = @drivers_ids.split(",")
         @drivers_ids.each do |driver_id|
           @driver  = Driver.find(driver_id)
-          @message = 'Surprise! We found you a new taxi customer. Would you like to take the request? SMS "Y" for Yes, "N" for No' 
+          @message = "Surprise! We found you a new taxi customer. Would you like to take the request? SMS 'Y' for Yes, 'N' for No" 
           send_message(@driver.cell_no, @message, @short_code)#send message to @driver.cell_no
         end
       else
@@ -38,7 +38,7 @@ namespace :events do
         @current_driver_id = @driver_ids.first
         cab_request.update_attribute(:current_driver_id, @current_driver_id)
         @current_driver = Driver.find(@current_driver_id)
-        @message = 'Surprise! We found you a new taxi customer. Would you like to take the request? SMS "Y" for Yes, "N" for No'
+        @message = "Surprise! We found you a new taxi customer. Would you like to take the request? SMS 'Y' for Yes, 'N' for No"
         send_message(@current_driver.cell_no, @message, @short_code)
         @driver_ids.delete_at(0)
         @driver_ids = @driver_ids.join(",")

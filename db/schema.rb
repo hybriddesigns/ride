@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20141215115248) do
+ActiveRecord::Schema.define(version: 20141216083130) do
 
   create_table "cab_requests", force: true do |t|
     t.datetime "created_at"
@@ -23,11 +23,11 @@ ActiveRecord::Schema.define(version: 20141215115248) do
     t.string   "customer_cell_no"
     t.boolean  "broadcast"
     t.boolean  "status"
-    t.datetime "time_limit"
     t.string   "chosen_drivers_ids"
     t.text     "more_locations"
     t.boolean  "options_flag"
     t.boolean  "ordered"
+    t.boolean  "location_selected"
   end
 
   create_table "driver_lists", force: true do |t|
