@@ -157,6 +157,9 @@ class CabRequestsController < ApplicationController
             elsif(@inc_message == "m" || @inc_message == "M")
               @message = 'Ride doesn\'t employ any taxi driver and Is not liable to driver\'s actions but we\'ll fully cooperate with legal authorities to resolve dispute at the expense of accuser. SMS A if u agree to terms'
               send_message(@cell_no, @message, @short_code)
+            else
+              @message = 'Please SMS A to complete order or N to cancel'
+              send_message(@cell_no, @message, @short_code)
             end  
 
           else
