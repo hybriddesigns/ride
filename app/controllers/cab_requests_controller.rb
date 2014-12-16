@@ -125,7 +125,7 @@ class CabRequestsController < ApplicationController
             if (!@cab_request.options_flag) # first time rejection
               send_more_locations_to_customer(@cab_request, @short_code) #send more options
             else # on rejection twice. delete the request and show "ask others" message
-              @message = "Please ask near by people the correct spelling to your location and send message again, Or try different name to the location"
+              @message = "Your RIDE request is canceled. Please come back and visit us later."
               send_message(@cell_no, @message, @short_code)
               @cab_request.delete 
             end       
