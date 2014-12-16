@@ -44,7 +44,7 @@ namespace :events do
         @driver_ids = @driver_ids.join(",")
         cab_request.update_attribute(:chosen_drivers_ids, @driver_ids)
       else
-        @message = "Sorry all the drivers are busy now. Please try later."
+        @message = "All our drivers are busy at this time assisting other customers. Please try again in a few mins. FYI: We are registering more drivers now."
         send_message(cab_request.customer_cell_no, @message, @short_code)
         cab_request.delete
       end

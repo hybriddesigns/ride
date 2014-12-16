@@ -161,8 +161,9 @@ class CabRequestsController < ApplicationController
             lock_location_choice_for_ride(@cab_request, @inc_message, @short_code) #lock the choice (1 to 100)
 
           else
-            @message = "You have chosen wrong input. Please send again correct input"
+            @message = "Please ask near by people the correct spelling to your location and send message again, Or try different name to the location"
             send_message(@cell_no, @message, @short_code)
+            @cab_request.delete 
           end
         end
       
@@ -175,10 +176,10 @@ class CabRequestsController < ApplicationController
               send_message(@driver.cell_no, @message, @short_code)
               @driver.confirm_deal
             elsif (!present_in_broadcasted_drivers(@driver)) 
-              @message = "You have send an invalid input."
+              @message = "Sorry you replied late! In the future, when you get a request reply back in ONE minute. Otherwise the system automatically skips your turn."
               send_message(@driver.cell_no, @message, @short_code) 
             else
-              @message = "You have send an invalid input."
+              @message = "Sorry you replied late! In the future, when you get a request reply back in ONE minute. Otherwise the system automatically skips your turn."
               send_message(@driver.cell_no, @message, @short_code)
             end
         elsif is_no(@inc_message)
@@ -186,7 +187,7 @@ class CabRequestsController < ApplicationController
           send_message(@driver.cell_no, @message, @short_code)
           ping_next_driver(@driver.id, @short_code)          
         else
-          @message = "You have send an invalid input."
+          @message = "Sorry you replied late! In the future, when you get a request reply back in ONE minute. Otherwise the system automatically skips your turn."
           send_message(@driver.cell_no, @message, @short_code)
         end
       end  
@@ -258,8 +259,9 @@ class CabRequestsController < ApplicationController
     def lock_location_choice_for_ride(cab_request, choice, short_code)
       locations = cab_request.more_locations.split("-")
       if(choice.to_i > locations.count)
-        @message = "You have chosen wrong input. Please send again correct input"
+        @message = "Please ask near by people the correct spelling to your location and send message again, Or try different name to the location"
         send_message(cab_request.customer_cell_no, @message, short_code) # 0. Kick out request if driver send wrong option
+        cab_request.delete
       else
         chosen_location = locations[choice.to_i - 1].split(",")
         cab_request.lock_choice(chosen_location[1], chosen_location[2], chosen_location[0]) # lat, long, location
@@ -287,7 +289,7 @@ class CabRequestsController < ApplicationController
         send_message(@drivers.first.cell_no, @message, @short_code)        
         cab_request.update_attributes(:current_driver_id => @drivers.first.id, :chosen_drivers_ids => @drivers_ids.gsub(/.{1}$/, ''))
       else #If driver not available in the locality
-        @message = "Sorry all the drivers are busy now. Please try later."
+        @message = "All our drivers are busy at this time assisting other customers. Please try again in a few mins. FYI: We are registering more drivers now."
         send_message(@cell_no, @message, @short_code)   
         cab_request.delete       
       end  
@@ -305,7 +307,7 @@ class CabRequestsController < ApplicationController
         @message = "Surprise! We found you a new taxi customer. Would you like to take the request? SMS 'Y' for Yes, 'N' for No"
         send_message(current_driver.cell_no, @message, short_code)        
       else
-        @message = "Sorry all the drivers are busy now. Please try later."
+        @message = "All our drivers are busy at this time assisting other customers. Please try again in a few mins. FYI: We are registering more drivers now."
         send_message(@cab_request.customer_cell_no, @message, short_code)        
         @cab_request.delete
       end
