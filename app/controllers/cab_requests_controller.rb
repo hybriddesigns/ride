@@ -169,7 +169,7 @@ class CabRequestsController < ApplicationController
       
       else #if driver
         @driver = Driver.where(:cell_no => @cell_no).first
-        if is_yes(@inc_message)
+        if !@inc_message.empty?
           @cab_request  = CabRequest.where(:current_driver_id => @driver.id).where(:status=>false).last
             if @cab_request.present?
               @message = "Here we go... Your customer lives near "+@cab_request.location.to_s+". You must call him/her in 2 mins. Customer phone number: "+@cab_request.customer_cell_no.to_s
