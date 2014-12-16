@@ -272,9 +272,9 @@ class CabRequestsController < ApplicationController
     end
 
     def contact_nearby_drivers(cab_request)
-      # @drivers = Driver.by_distance(:origin => [cab_request.latitude, cab_request.longitude]).limit(50)
+      @drivers = Driver.by_distance(:origin => [cab_request.latitude, cab_request.longitude]).limit(50)
       #Testing
-      @drivers = Driver.where("cell_no IN ('+251929104455', '+251913135534', '+251938483821')")
+      # @drivers = Driver.where("cell_no IN ('+251929104455', '+251913135534', '+251938483821')")
       #Testing
       @drivers_ids = ""
 
