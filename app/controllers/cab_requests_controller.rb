@@ -182,7 +182,7 @@ class CabRequestsController < ApplicationController
               send_message(@driver.cell_no, @message, @short_code)
               @driver.confirm_deal
             elsif (!present_in_broadcasted_drivers(@driver)) 
-              @message = "Sorry you replied late! In the future, when you get a request reply back in ONE minute. Otherwise the system automatically skips your turn."
+              @message = "Ops, sorry someone got the number before you. Next time text back a bit faster."
               send_message(@driver.cell_no, @message, @short_code) 
             else
               @message = "Sorry you replied late! In the future, when you get a request reply back in ONE minute. Otherwise the system automatically skips your turn."

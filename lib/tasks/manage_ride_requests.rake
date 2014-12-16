@@ -18,10 +18,12 @@ namespace :events do
         @drivers_ids = @drivers_ids.split(",")
         @drivers_ids.each do |driver_id|
           @driver  = Driver.find(driver_id)
-          @message = "Surprise! We found you a new taxi customer. Would you like to take the request? SMS 'Y' for Yes, 'N' for No" 
+          @message = "Hurry a customer is waiting for a RIDE. We have sent this request to 20 drivers. First one to text Y gets the phone number of the customer." 
           send_message(@driver.cell_no, @message, @short_code)#send message to @driver.cell_no
         end
       else
+        @message = "All our drivers are busy at this time assisting other customers. Please try again in a few mins. FYI: We are registering more drivers now."
+        send_message(cab_request.customer_cell_no, @message, @short_code)
         cab_request.delete
       end
     end
