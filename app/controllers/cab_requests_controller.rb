@@ -121,21 +121,7 @@ class CabRequestsController < ApplicationController
             end  
           end  
 
-          if(@cab_request.location_selected)
-            if(@inc_message == "A" || @inc_message == "a")
-              @cab_request.update_attributes(:ordered => true)
-              contact_nearby_drivers(@cab_request)
-              @message = 'Congrats! Your request is sent to a nearby taxi. If you do not get a call within 7 mins, please SMS next.'
-              send_message(@cell_no, @message, @short_code)
-            elsif(@inc_message == "t" || @inc_message == "T")
-              @message = 'Terms| by completing order u agree that we pass ur phone no. to a Taxi service provider, and upon Court order to authorities if requested. Sms m for more...'
-              send_message(@cell_no, @message, @short_code)
-            elsif(@inc_message == "m" || @inc_message == "M")
-              @message = 'Ride doesn\'t employ any taxi driver and Is not liable to driver\'s actions but we\'ll fully cooperate with legal authorities to resolve dispute at the expense of accuser. SMS A if u agree to terms'
-              send_message(@cell_no, @message, @short_code)
-            end  
-
-          elsif is_no(@inc_message) # user rejects the location
+          if is_no(@inc_message) # user rejects the location
             if (!@cab_request.options_flag) # first time rejection
               send_more_locations_to_customer(@cab_request, @short_code) #send more options
             else # on rejection twice. delete the request and show "ask others" message
@@ -156,6 +142,20 @@ class CabRequestsController < ApplicationController
 
           elsif ((@inc_message == "1" || @inc_message == "2" || @inc_message == "3" || @inc_message == 1 || @inc_message == 2 || @inc_message == 3) && @cab_request.more_locations.present?) #if some option has been selected
             lock_location_choice_for_ride(@cab_request, @inc_message, @short_code) #lock the choice (1 to 100)
+
+          elsif(@cab_request.location_selected)
+            if(@inc_message == "A" || @inc_message == "a")
+              @cab_request.update_attributes(:ordered => true)
+              contact_nearby_drivers(@cab_request)
+              @message = 'Congrats! Your request is sent to a nearby taxi. If you do not get a call within 7 mins, please SMS next.'
+              send_message(@cell_no, @message, @short_code)
+            elsif(@inc_message == "t" || @inc_message == "T")
+              @message = 'Terms| by completing order u agree that we pass ur phone no. to a Taxi service provider, and upon Court order to authorities if requested. Sms m for more...'
+              send_message(@cell_no, @message, @short_code)
+            elsif(@inc_message == "m" || @inc_message == "M")
+              @message = 'Ride doesn\'t employ any taxi driver and Is not liable to driver\'s actions but we\'ll fully cooperate with legal authorities to resolve dispute at the expense of accuser. SMS A if u agree to terms'
+              send_message(@cell_no, @message, @short_code)
+            end  
 
           else
             @message = "Please ask near by people the correct spelling to your location and send message again, Or try different name to the location"
