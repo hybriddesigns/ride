@@ -159,7 +159,7 @@ class CabRequestsController < ApplicationController
               @message = 'Terms| by completing order u agree that we pass ur phone no. to a Taxi service provider, and upon Court order to authorities if requested. Sms m for more...'
               send_message(@cell_no, @message, @short_code)
             elsif(@inc_message == "m" || @inc_message == "M")
-              @message = 'Ride doesn\'t employ any taxi driver and Is not liable to driver\'s actions but we\'ll fully cooperate with legal authorities to resolve dispute at the expense of accuser. SMS A if u agree to terms'
+              @message = 'Ride doesn\'t employ any taxi driver and Is not liable to driver\'s actions but we\'ll fully cooperate with legal authorities to resolve any issue. SMS A if u agree to term'
               send_message(@cell_no, @message, @short_code)
             else
               @message = 'Please SMS A to complete order or N to cancel'
