@@ -4,12 +4,11 @@ namespace :events do
   task :fetch => :environment do
  
     @short_code   = "+2518202"
+   
     @passed_time  = Time.now - 5.minutes
-
     puts "Check cab requests of 5 minutes old and not responded. Broadcasting to near drivers" 
-    puts (Time.now).to_s + @passed_time.to_s
 
-    @cab_requests = CabRequest.where(:deleted => false, :status => false, :broadcast => true, :broadcasted => false, :ordered => true).where("created_at < ?", @passed_time)
+    @cab_requests = CabRequest.where(:deleted => false, :status => false, :broadcast => true, :broadcasted => false, :ordered => true).where("updated_at < ?", @passed_time)
     @cab_requests.each do |cab_request|
     	#send broadcast to all remaining drivers
       @drivers_ids  = cab_request.chosen_drivers_ids
@@ -28,9 +27,8 @@ namespace :events do
       end
     end
 
-
-    @short_code   = "+2518202"
     @passed_time  = Time.now - 2.minutes
+    puts "Check cab requests of 2 minutes after broadcasting and deleted" 
 
     @cab_requests = CabRequest.where(:deleted => false, :status => false, :broadcast => true, :broadcasted => true, :ordered => true).where("updated_at < ?", @passed_time)
     @cab_requests.each do |cab_request|
@@ -43,13 +41,13 @@ namespace :events do
 
     @passed_time  = Time.now - 1.minutes
     puts "Check cab requests of 1 minutes and not responded by the chosen driver" 
-    puts (Time.now).to_s + @passed_time.to_s
 
-    @cab_requests = CabRequest.where(:deleted => false, :status=>false, :broadcast=>false, :ordered => true).where("updated_at < ?", @passed_time)
+    @cab_requests = CabRequest.where(:deleted => false, :status => false, :broadcast => false, :ordered => true).where("updated_at < ?", @passed_time)
     @cab_requests.each do |cab_request|
       if(cab_request.offer_count == 5)
         cab_request.update_attribute(:broadcast => true)        
       elsif cab_request.chosen_drivers_ids.present?  
+        puts cab_request.chosen_drivers_ids
       	@driver_ids = cab_request.chosen_drivers_ids
       	@driver_ids = @driver_ids.split(%r{,\i*})
         @current_driver_id = @driver_ids.first
@@ -68,9 +66,8 @@ namespace :events do
 
     @passed_time  = Time.now - 1.hours
     puts "Check cab requests 1 hours old and remove them" 
-    puts (Time.now).to_s + @passed_time.to_s
 
-    @cab_requests = CabRequest.where(:deleted => false, :ordered => false).where("updated_at < ?", @passed_time)
+    @cab_requests = CabRequest.where("deleted = 0 and ordered = 0 and updated_at < ?", @passed_time)
     @cab_requests.each do |cab_request|
       @message = "Your request at ride is canceled because you took an hour to reply. To order again, pls SMS your location."
       send_message(cab_request.customer_cell_no, @message, @short_code)
@@ -81,5 +78,5 @@ namespace :events do
 end
 
 def send_message(cell_no, message, short_code)
-  Driver.connection.execute("INSERT INTO send_sms (momt, sender, receiver, msgdata, sms_type, smsc_id) VALUES ('MT','"+short_code+"','"+ cell_no+"','"+message+"',2,'"+short_code+"')")
+  Driver.connection.execute("INSERT INTO send_sms (momt, sender, receiver, msgdata, sms_type, smsc_id) VALUES (\"MT\",\""+short_code+"\",\""+ cell_no+"\",\""+message+"\",2,\""+short_code+"\")")
 end

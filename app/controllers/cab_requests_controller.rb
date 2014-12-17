@@ -177,17 +177,14 @@ class CabRequestsController < ApplicationController
         @driver = Driver.where(:cell_no => @cell_no).first
         if !@inc_message.empty?
           @cab_request  = CabRequest.where(:deleted => false, :current_driver_id => @driver.id, :status => false).last
-            if @cab_request.present?
-              @message = "Here we go... Your customer lives near "+@cab_request.location.to_s+". You must call him/her in 2 mins. Customer phone number: "+@cab_request.customer_cell_no.to_s
-              send_message(@driver.cell_no, @message, @short_code)
-              @driver.confirm_deal
-            elsif (!present_in_broadcasted_drivers(@driver)) 
-              @message = "Ops, sorry someone got the number before you. Next time text back a bit faster."
-              send_message(@driver.cell_no, @message, @short_code) 
-            else
-              @message = "Sorry you replied late! In the future, when you get a request reply back in ONE minute. Otherwise the system automatically skips your turn."
-              send_message(@driver.cell_no, @message, @short_code)
-            end
+          if @cab_request.present?
+            @message = "Here we go... Your customer lives near "+@cab_request.location.to_s+". You must call him/her in 2 mins. Customer phone number: "+@cab_request.customer_cell_no.to_s
+            send_message(@driver.cell_no, @message, @short_code)
+            @cab_request.update_attributes(:status => true, :final_driver_id => @driver.id, :deleted => true)
+          elsif (!present_in_broadcasted_drivers(@driver)) 
+            @message = "Ops, sorry someone got the number before you. Next time text back a bit faster."
+            send_message(@driver.cell_no, @message, @short_code) 
+          end
         elsif is_no(@inc_message)
           @message = "Your turn is given to another driver. Thank you for helping another fellow RIDE driver :)"
           send_message(@driver.cell_no, @message, @short_code)
@@ -416,28 +413,28 @@ class CabRequestsController < ApplicationController
     end  
 
     def present_in_broadcasted_drivers(driver)
-      @cab_requests=CabRequest.where(:deleted => false, :status => false, :broadcast => true)
-      @cab_request=nil #the cab request needed
+      @cab_requests = CabRequest.where(:deleted => false, :status => false, :broadcast => true)
+      @cab_request  = nil #the cab request needed
       @cab_requests.each do |cab_request|
         @drivers_ids  = cab_request.chosen_drivers_ids #get comma seperated ids of drivers
          if(!@drivers_ids.empty?)
            @drivers_ids  = @drivers_ids.split(",") #converts to array
-           @drivers_ids.each do |driver_id| 
-                 
-            if driver.id == driver_id.to_i
-              @cab_request=cab_request
-            end
+           @drivers_ids.each do |driver_id|                  
+             if (driver.id == driver_id.to_i)
+               @cab_request = cab_request
+               break
+             end
            end
          end
       end
+
       if @cab_request.present?
-        @cab_request.update_attributes(:status => true)
-        @cab_request.update_attributes(:current_driver_id => driver.id)
         @message = "Here we go... Your customer lives near "+@cab_request.location.to_s+". You must call him/her in 2 mins. Customer phone number: "+@cab_request.customer_cell_no.to_s
         send_message(driver.cell_no, @message, @short_code) 
-        driver.confirm_deal
+        @cab_request.update_attributes(:status => true, :final_driver_id => driver.id, :deleted => true)
+        return true
       else
-        return nil
+        return false
       end
     end
 

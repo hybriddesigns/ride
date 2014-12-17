@@ -14,9 +14,4 @@ class Driver < ActiveRecord::Base
         return true
       end
     end
-
-    def confirm_deal
-      @cab_request = CabRequest.where(:current_driver_id => self.id).where(:status => false).last
-      @cab_request.update_attributes(:status => true)
-    end
 end
