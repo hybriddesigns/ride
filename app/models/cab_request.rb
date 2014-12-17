@@ -5,16 +5,17 @@ class CabRequest < ActiveRecord::Base
   public
     def register_request(customer_cell_no, lat, long, location)
     	self.customer_cell_no = customer_cell_no
-    	self.latitude     = lat
-    	self.longitude    = long
-    	self.location     = location
-    	self.status       = false
-    	self.broadcast    = false
-      self.options_flag = false
-      self.ordered      = false
-      self.location_selected = false
-      self.offer_count = 0
-      self.broadcasted = false
+    	self.latitude           = lat
+    	self.longitude          = long
+    	self.location           = location
+    	self.status             = false
+    	self.broadcast          = false
+      self.options_flag       = false
+      self.ordered            = false
+      self.location_selected  = false
+      self.offer_count        = 0
+      self.broadcasted        = false
+      self.deleted            = false
     	self.save
     end
 
