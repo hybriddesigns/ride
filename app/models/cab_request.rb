@@ -3,10 +3,6 @@ class CabRequest < ActiveRecord::Base
 	has_many :driver_lists
 
   public
-    def self.getCabRequests(customer_cell_no)
-    	CabRequest.where(:customer_cell_no => customer_cell_no)    	 
-    end
-
     def register_request(customer_cell_no, lat, long, location)
     	self.customer_cell_no = customer_cell_no
     	self.latitude     = lat
@@ -31,8 +27,8 @@ class CabRequest < ActiveRecord::Base
     end
 
     def self.is_new(customer_cell_no)
-      @cab_request = CabRequest.where(:customer_cell_no => customer_cell_no)
-      @old_request = @cab_request.where(:status => false).last
+      @cab_request = CabRequest.where(:deleted => false, :customer_cell_no => customer_cell_no)
+      @old_request = @cab_request.where(:deleted => false, :status => false).last
       if @old_request.present?
         return false
       else

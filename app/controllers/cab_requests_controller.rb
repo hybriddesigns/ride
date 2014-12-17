@@ -44,10 +44,10 @@ class CabRequestsController < ApplicationController
       elsif(Driver.where("cell_no = ?", @cell_no).present?)
         @message="You are already registered in our system. Thank you!"
         send_message(@cell_no, @message, @short_code)
-      elsif(!DriverRegistrationRequest.where("cell_no = ?", @cell_no).present?) # 1. Get Location from the sms      
+      elsif(!DriverRegistrationRequest.where(:deleted => false, :cell_no => @cell_no).present?) # 1. Get Location from the sms      
          @location_to_confirm = driver_register_and_get_location(@cell_no, @inc_message, @short_code)
       else #Already Driver Session initiated
-        @driver_reg_session = DriverRegistrationRequest.where("cell_no = ?", @cell_no).first
+        @driver_reg_session = DriverRegistrationRequest.where(:deleted => false, :cell_no => @cell_no).first
         locations = @driver_reg_session.location.split("-")
         
         if(locations.present?) #Logic for name input
@@ -68,7 +68,7 @@ class CabRequestsController < ApplicationController
           else
             chosen_location = locations[@inc_message.to_i - 1].split(",")
             Driver.create(:cell_no => @cell_no, :location_lat => chosen_location[1],  :location_long =>  chosen_location[2], :location =>  chosen_location[0])
-            @driver_reg_session.delete
+            @driver_reg_session.update_attributes(:deleted => true)
             @message = "You are registered in the system successfully. Thank you!\nPlease share this info with at least 5 taxi drivers."
             send_message(@cell_no, @message, @short_code)                            
           end  
@@ -77,7 +77,7 @@ class CabRequestsController < ApplicationController
           send_more_locations(@driver_reg_session, @short_code)
 
         elsif is_no(@inc_message)
-          @driver_reg_session.delete
+          @driver_reg_session.update_attributes(:deleted => true)
           @message = "Please ask near by people the correct spelling to your location and send message again"
           send_message(@cell_no, @message, @short_code)                            
 
@@ -106,7 +106,7 @@ class CabRequestsController < ApplicationController
         if CabRequest.is_new(@cell_no) # new call?
           register_customer_and_get_location(@cell_no, @inc_message, @short_code) #location to show
         else # old call
-          @cab_request = CabRequest.getCabRequests(@cell_no).where(:status=>false).last #get pending request of this user
+          @cab_request = CabRequest.where(:deleted => false, :customer_cell_no => @cell_no, :status => false).last #get pending request of this user
 
           if(@cab_request.options_flag)
             locations = @cab_request.more_locations.split("-")          
@@ -125,13 +125,13 @@ class CabRequestsController < ApplicationController
             if(@cab_request.location_selected)
               @message = "Your RIDE request is canceled. Please come back and visit us later."
               send_message(@cell_no, @message, @short_code)
-              @cab_request.delete 
+              @cab_request.update_attributes(:deleted => true)
             elsif (!@cab_request.options_flag) # first time rejection
               send_more_locations_to_customer(@cab_request, @short_code) #send more options
             else # on rejection twice. delete the request and show "ask others" message
               @message = "Please ask near by people the correct spelling to your location and send message again, Or try different name to the location"
               send_message(@cell_no, @message, @short_code)
-              @cab_request.delete 
+              @cab_request.update_attributes(:deleted => true)
             end       
 
           elsif (is_yes(@inc_message) && @cab_request.options_flag == false) #user agrees
@@ -169,14 +169,14 @@ class CabRequestsController < ApplicationController
           else
             @message = "Please ask near by people the correct spelling to your location and send message again, Or try different name to the location"
             send_message(@cell_no, @message, @short_code)
-            @cab_request.delete 
+            @cab_request.update_attributes(:deleted => true) 
           end
         end
       
       else #if driver
         @driver = Driver.where(:cell_no => @cell_no).first
         if !@inc_message.empty?
-          @cab_request  = CabRequest.where(:current_driver_id => @driver.id).where(:status=>false).last
+          @cab_request  = CabRequest.where(:deleted => false, :current_driver_id => @driver.id, :status => false).last
             if @cab_request.present?
               @message = "Here we go... Your customer lives near "+@cab_request.location.to_s+". You must call him/her in 2 mins. Customer phone number: "+@cab_request.customer_cell_no.to_s
               send_message(@driver.cell_no, @message, @short_code)
@@ -253,7 +253,7 @@ class CabRequestsController < ApplicationController
       else
         @message = "Please ask near by people the correct spelling to your location and send message again, Or try different name to the location"
         send_message(cab_request.customer_cell_no, @message, @short_code)
-        cab_request.delete
+        cab_request.update_attributes(:deleted => true)
       end  
 
     end
@@ -267,7 +267,7 @@ class CabRequestsController < ApplicationController
       if(choice.to_i > locations.count)
         @message = "Please ask near by people the correct spelling to your location and send message again, Or try different name to the location"
         send_message(cab_request.customer_cell_no, @message, short_code) # 0. Kick out request if driver send wrong option
-        cab_request.delete
+        cab_request.update_attributes(:deleted => true)
       else
         chosen_location = locations[choice.to_i - 1].split(",")
         cab_request.lock_choice(chosen_location[1], chosen_location[2], chosen_location[0]) # lat, long, location
@@ -297,12 +297,12 @@ class CabRequestsController < ApplicationController
       else #If driver not available in the locality
         @message = "All our drivers are busy at this time assisting other customers. Please try again in a few mins. FYI: We are registering more drivers now."
         send_message(@cell_no, @message, @short_code)   
-        cab_request.delete       
+        cab_request.update_attributes(:deleted => true)       
       end  
     end
 
     def ping_next_driver(driver_id, short_code)
-      @cab_request  = CabRequest.where(:current_driver_id => driver_id).where(:status=>false).last
+      @cab_request  = CabRequest.where(:deleted => false, :current_driver_id => driver_id, :status => false).last
       @drivers_ids  = @cab_request.chosen_drivers_ids #get comma seperated ids of drivers
       if(!@drivers_ids.empty?)
         @drivers_ids  = @drivers_ids.split(",") #converts to array
@@ -315,7 +315,7 @@ class CabRequestsController < ApplicationController
       else
         @message = "All our drivers are busy at this time assisting other customers. Please try again in a few mins. FYI: We are registering more drivers now."
         send_message(@cab_request.customer_cell_no, @message, short_code)        
-        @cab_request.delete
+        @cab_request.update_attributes(:deleted => true)
       end
     end
 
@@ -341,8 +341,8 @@ class CabRequestsController < ApplicationController
           if(index < 2)
             if(searched_location.similar(address["formatted_address"]) >= 85.0)
               Driver.create(:cell_no => cell_no, :location_lat => get_latitude(address), :location_long => get_longitude(address), :location => address["formatted_address"])
-              @driver_reg_session = DriverRegistrationRequest.where("cell_no = ?", cell_no).first
-              @driver_reg_session.delete
+              @driver_reg_session = DriverRegistrationRequest.where(:deleted => false, :cell_no => cell_no).first
+              @driver_reg_session.update_attributes(:deleted => true)
               message="You are registered in the system successfully. Thank you!\nPlease share this info with at least 5 taxi drivers."
               send_message(cell_no, message, short_code)        
               return
@@ -409,14 +409,14 @@ class CabRequestsController < ApplicationController
         driver_reg_session.update(:location => @session_message.gsub( /.{1}$/, '' ), :more_location_count => (driver_reg_session.more_location_count + 1))
 
       else
-        driver_reg_session.delete
+        driver_reg_session.update_attributes(:deleted => true)
         @message = "No more locations. Please ask near by people the correct spelling to your location and send message again"
         send_message(@cell_no, @message, @short_code)
       end  
     end  
 
     def present_in_broadcasted_drivers(driver)
-      @cab_requests=CabRequest.where(:status=>false, :broadcast=>true)
+      @cab_requests=CabRequest.where(:deleted => false, :status => false, :broadcast => true)
       @cab_request=nil #the cab request needed
       @cab_requests.each do |cab_request|
         @drivers_ids  = cab_request.chosen_drivers_ids #get comma seperated ids of drivers
@@ -443,7 +443,6 @@ class CabRequestsController < ApplicationController
 
     ######### Methods Related To Location API #########
     def get_locations(user_entered_location)
-      # location = user_entered_location #.downcase.split.join('+').delete("'").delete(".").delete(",") #convert string into right form
       if user_entered_location.include? "Arat kilo"
         user_entered_location = "4 Kilo"
       end  

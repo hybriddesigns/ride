@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20141216145133) do
+ActiveRecord::Schema.define(version: 20141217073950) do
 
   create_table "cab_requests", force: true do |t|
     t.datetime "created_at"
@@ -30,6 +30,7 @@ ActiveRecord::Schema.define(version: 20141216145133) do
     t.boolean  "location_selected"
     t.integer  "offer_count"
     t.boolean  "broadcasted"
+    t.boolean  "deleted"
   end
 
   create_table "driver_lists", force: true do |t|
@@ -48,6 +49,7 @@ ActiveRecord::Schema.define(version: 20141216145133) do
     t.datetime "updated_at"
     t.integer  "more_location_count"
     t.string   "searched_location"
+    t.boolean  "deleted"
   end
 
   create_table "drivers", force: true do |t|
