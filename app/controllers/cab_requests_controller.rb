@@ -1,7 +1,7 @@
 class CabRequestsController < ApplicationController
   include HTTParty
   require 'json'
-
+  before_action :authenticate_user!, :only => [:new]
   API_BASE_URL = 'https://maps.googleapis.com/maps/api/geocode/json?address='
   APP_KEY= '&key=AIzaSyBe4SyPWoNw_RKyCMK5v_bCD5OE9kvlTGE'
 
