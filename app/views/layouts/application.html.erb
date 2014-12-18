@@ -75,6 +75,7 @@
                 <%= value %>    
             </div>
           <% end %>
+          <% if user_signed_in? %>
           <div class="span3">
             <div class="well sidebar-nav ">
               <h3>Admin Tasks</h3>
@@ -84,8 +85,8 @@
               </ul>
             </div><!--/.well -->
           </div><!--/span-->
+          <%end%>
           <div class="span9">
-            <%= bootstrap_flash %>
             <%= yield %>
           </div>
         </div><!--/row-->
