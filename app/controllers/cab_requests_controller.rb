@@ -68,7 +68,7 @@ class CabRequestsController < ApplicationController
           else
             chosen_location = locations[@inc_message.to_i - 1].split(",")
             Driver.create(:cell_no => @cell_no, :location_lat => chosen_location[1],  :location_long =>  chosen_location[2], :location =>  chosen_location[0])
-            @driver_reg_session.update_attributes(:deleted => true)
+            @driver_reg_session.update_attributes(:active => true, :deleted => true)
             @message = "You are registered in the system successfully. Thank you!\nPlease share this info with at least 5 taxi drivers."
             send_message(@cell_no, @message, @short_code)                            
           end  
@@ -118,7 +118,7 @@ class CabRequestsController < ApplicationController
           register_customer_and_get_location(@cell_no, @inc_message, @short_code) #location to show
         else # old call
           @cab_request = CabRequest.where(:deleted => false, :customer_cell_no => @cell_no, :status => false).last #get pending request of this user
-          if(@cab_request.options_flag)
+          if(@cab_request.more_location_count > 0)
             locations = @cab_request.more_locations.split("-")          
             if(locations.present?) #Logic for name input
               locations.each_with_index do |location, index|
@@ -136,15 +136,16 @@ class CabRequestsController < ApplicationController
               @message = "Your RIDE request is canceled. Please come back and visit us later."
               send_message(@cell_no, @message, @short_code)
               @cab_request.update_attributes(:deleted => true)
-            elsif (!@cab_request.options_flag) # first time rejection
-              send_more_locations_to_customer(@cab_request, @short_code) #send more options
+            # elsif (!@cab_request.options_flag) # first time rejection
+            #   send_more_locations_to_customer(@cab_request, @short_code) #send more options
             else # on rejection twice. delete the request and show "ask others" message
-              @message = "Please ask near by people the correct spelling to your location and send message again, Or try different name to the location"
-              send_message(@cell_no, @message, @short_code)
-              @cab_request.update_attributes(:deleted => true)
+              send_more_locations_to_customer(@cab_request, @short_code) #send more options
+              # @message = "Please ask near by people the correct spelling to your location and send message again, Or try different name to the location"
+              # send_message(@cell_no, @message, @short_code)
+              # @cab_request.update_attributes(:deleted => true)
             end       
 
-          elsif (is_yes(@inc_message) && @cab_request.options_flag == false) #user agrees
+          elsif (is_yes(@inc_message) && @cab_request.more_location_count == 0) #user agrees
             #Add Terms & Conditions
             @cab_request.update_attributes(:location_selected => true)
             @message = 'Your RIDE is being arranged now. To COMPLETE ur order, If u agree to our terms, SMS Back A. To read our terms, SMS T before u complete the order.'
@@ -221,12 +222,12 @@ class CabRequestsController < ApplicationController
     end
 
     def register_customer_and_get_location(customer_cell_no, location, short_code)
-      @result = get_locations(location)
-      if(@result['results'].count > 0)
-        @base   = @result["results"][0] #for first result only
-        lat     = get_latitude(@base)
-        long    = get_longitude(@base)
-        @location_to_confirm = @result["results"][0]["address_components"][0]['long_name']
+      @results = get_locations(location)
+      if(@results.count > 0)
+        @base   = @results[0] #for first result only
+        lat     = @base['lat']
+        long    = @base['long']
+        @location_to_confirm = @base['name']
         @cab_request = CabRequest.new
         @cab_request.register_request(customer_cell_no, lat, long, location)
         @message   = "Is your pick-up location '"+@location_to_confirm+"?' SMS Y for Yes, N for No"
@@ -238,22 +239,24 @@ class CabRequestsController < ApplicationController
     end
 
     def send_more_locations_to_customer(cab_request, short_code)
-      cab_request.update_option_flag #count of location rejection by user
-      @result = get_locations(cab_request.location) #get all the locations for a string to show more options
+      @results = get_locations(cab_request.location) #get all the locations for a string to show more options
+      more_location_count = (cab_request.more_location_count * 2)
 
-      if(@result['results'].count > 1)
+      if(@results.count > (more_location_count+1))
         @message  = "Please SMS back the correct number of your location\n"
         @session_message  = ""
-        @result['results'].each_with_index do |address, index|
-          if(index > 0 && index < 3)
-            location = address['address_components'][0]['long_name']
-            lat      = get_latitude(address)
-            long     = get_longitude(address)
-            @message += (index).to_s + "- " + location.to_s + "\n"
+        location_count = 1
+        @results.each_with_index do |result, index|
+          if(index >= (more_location_count+1) && location_count < 3)
+            location = result['name']
+            lat      = result['lat']
+            long     = result['long']
+            @message += (location_count).to_s + "- " + location.to_s + "\n"
             @session_message += location.to_s+","+lat.to_s+","+long.to_s+"-"
+            location_count   += 1
           end  
         end
-        cab_request.update(:more_locations => @session_message.gsub( /.{1}$/, '' ))
+        cab_request.update_attributes(:more_locations => @session_message.gsub( /.{1}$/, '' ) , :more_location_count => (cab_request.more_location_count + 1))
         @message  += "If location not listed? SMS back N"
         send_message(cab_request.customer_cell_no, @message, short_code) #Send Message
       else
@@ -327,16 +330,16 @@ class CabRequestsController < ApplicationController
 
     # For Drivers
     def driver_register_and_get_location(cell_no, searched_location, short_code)
-      @result = get_locations(searched_location)
+      @results = get_locations(searched_location)
 
-      if(@result['results'].present?)
+      if(@results.present?)
         # Check if location matchs with google correctly if match register and exit
-        @result['results'].each_with_index do |address, index|
+        @results.each_with_index do |result, index|
           if(index < 2)
-            if(searched_location.similar(address["formatted_address"]) >= 85.0)
-              Driver.create(:cell_no => cell_no, :location_lat => get_latitude(address), :location_long => get_longitude(address), :location => address["formatted_address"])
+            if(searched_location.similar(result['name']) >= 85.0)
+              Driver.create(:cell_no => cell_no, :location_lat => result['lat'], :location_long => result['long'], :location => result['name'])
               @driver_reg_session = DriverRegistrationRequest.where(:deleted => false, :cell_no => cell_no).first
-              @driver_reg_session.update_attributes(:deleted => true)
+              @driver_reg_session.update_attributes(:active => true, :deleted => true)
               message="You are registered in the system successfully. Thank you!\nPlease share this info with at least 5 taxi drivers."
               send_message(cell_no, message, short_code)        
               return
@@ -347,24 +350,24 @@ class CabRequestsController < ApplicationController
         # Check if location not matchs with google correctly
         @message  = "Please SMS back the correct number of your location\n"
         @session_message  = ""
-        @result['results'].each_with_index do |address, index|
+        @results.each_with_index do |result, index|
           if(index < 2)
-            location = address["address_components"][0]['long_name']
-            lat      = get_latitude(address)
-            long     = get_longitude(address)
+            location = result['name']
+            lat      = result['lat']
+            long     = result['long']
             @message  += (index+1).to_s + "- " + location.to_s + "\n"
             @session_message += location.to_s+","+lat.to_s+","+long.to_s+"-"
           end  
         end
 
-        if(@result['results'].count > 2)
+        if(@results.count > 2)
           @message  += "Need more? SMS back M"
         else  
           @message  += "If location not listed? SMS back N"
         end  
 
         send_message(cell_no, @message, short_code) #Send Message
-        DriverRegistrationRequest.create(:cell_no => cell_no, :location => @session_message.gsub( /.{1}$/, '' ), :active => false, :more_location_count => 1, :searched_location => searched_location)
+        DriverRegistrationRequest.create(:cell_no => cell_no, :location => @session_message.gsub( /.{1}$/, '' ), :active => false, :more_location_count => 1, :searched_location => searched_location, :deleted => false)
 
 
       else # If location is invalid and no result from Google API
@@ -375,25 +378,25 @@ class CabRequestsController < ApplicationController
     end
 
     def send_more_locations(driver_reg_session, short_code)
-      @result = get_locations(driver_reg_session.searched_location)
+      @results = get_locations(driver_reg_session.searched_location)
       more_location_count = (driver_reg_session.more_location_count * 2)
 
-      if(@result['results'].count > more_location_count)
+      if(@results.count > more_location_count)
         @message  = "Please SMS back the correct number of your location \n"
         @session_message  = ""
         location_count = 1
-        @result['results'].each_with_index do |address, index|
+        @results.each_with_index do |result, index|
           if(index >= (more_location_count - 1) && index < (more_location_count + 1))
-            location = address["address_components"][0]['long_name']
-            lat      = get_latitude(address)
-            long     = get_longitude(address)
+            location = result['name']
+            lat      = result['lat']
+            long     = result['long']
             @message  += (location_count).to_s + "- " + location.to_s + "\n"
             @session_message += location.to_s+","+lat.to_s+","+long.to_s+"-"
             location_count += 1
           end  
         end
 
-        if(@result['results'].count > (more_location_count + 2))
+        if(@results.count > (more_location_count + 2))
           @message  += "Need more? SMS back M"
         else  
           @message  += "If location not listed? SMS back N"
@@ -440,18 +443,32 @@ class CabRequestsController < ApplicationController
       if user_entered_location.include? "Arat kilo"
         user_entered_location = "4 Kilo"
       end  
-      location = user_entered_location.to_s + " Addis Abab Ethiopia"
+      location = user_entered_location.to_s + " Addis Ababa Ethiopia"
       location = location.gsub!(" ", "+")
-      @result  = HTTParty.get(URI::encode(API_BASE_URL + location.to_s + APP_KEY))  
+      @google_locations  = HTTParty.get(URI::encode(API_BASE_URL + location.to_s + APP_KEY))
+      #Get Results from Google
+      @result = Array.new
+      @google_location_names = Array.new
+      @google_locations['results'].each do |google_location|
+        location = Hash.new
+        location['name'] = google_location['address_components'][0]['long_name']
+        location['lat']  = google_location['geometry']['location']['lat']
+        location['long'] = google_location['geometry']['location']['lng']
+        @google_location_names.push(location['name'])
+        @result.push(location)
+      end  
+      #Get Results from system
+      @sys_locations = Location.where("location_name Like '%#{user_entered_location}%'")
+      @sys_locations.each do |sys_location|
+        if(! @google_location_names.include? sys_location.location_name)
+          location = Hash.new
+          location['name'] = sys_location.location_name
+          location['lat']  = sys_location.latitude
+          location['long'] = sys_location.longitude
+          @result.push(location)
+        end 
+      end  
       return @result  
-    end
-
-    def get_latitude(query_result)
-        return query_result["geometry"]["location"]["lat"]
-    end
-
-    def get_longitude(query_result)
-        return query_result["geometry"]["location"]["lng"]
     end
     ######### Methods Related To Location API #########
 end

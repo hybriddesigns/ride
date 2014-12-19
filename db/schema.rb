@@ -11,21 +11,20 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20141219095409) do
+ActiveRecord::Schema.define(version: 20141219120316) do
 
   create_table "cab_requests", force: true do |t|
     t.datetime "created_at"
     t.datetime "updated_at"
     t.string   "location"
-    t.float    "latitude",           limit: 24
-    t.float    "longitude",          limit: 24
+    t.float    "latitude",            limit: 24
+    t.float    "longitude",           limit: 24
     t.integer  "current_driver_id"
     t.string   "customer_cell_no"
     t.boolean  "broadcast"
     t.boolean  "status"
     t.string   "chosen_drivers_ids"
     t.text     "more_locations"
-    t.boolean  "options_flag"
     t.boolean  "ordered"
     t.boolean  "location_selected"
     t.integer  "offer_count"
@@ -33,6 +32,7 @@ ActiveRecord::Schema.define(version: 20141219095409) do
     t.boolean  "deleted"
     t.integer  "final_driver_id"
     t.boolean  "closed"
+    t.integer  "more_location_count"
   end
 
   create_table "driver_registration_requests", force: true do |t|

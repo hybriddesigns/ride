@@ -4,28 +4,24 @@ class CabRequest < ActiveRecord::Base
 
   public
     def register_request(customer_cell_no, lat, long, location)
-    	self.customer_cell_no = customer_cell_no
-    	self.latitude           = lat
-    	self.longitude          = long
-    	self.location           = location
-    	self.status             = false
-    	self.broadcast          = false
-      self.options_flag       = false
-      self.ordered            = false
-      self.location_selected  = false
-      self.offer_count        = 0
-      self.broadcasted        = false
-      self.deleted            = false
-      self.closed             = false
+    	self.customer_cell_no    = customer_cell_no
+    	self.latitude            = lat
+    	self.longitude           = long
+    	self.location            = location
+    	self.status              = false
+    	self.broadcast           = false
+      self.more_location_count = 0
+      self.ordered             = false
+      self.location_selected   = false
+      self.offer_count         = 0
+      self.broadcasted         = false
+      self.deleted             = false
+      self.closed              = false
     	self.save
     end
 
     def lock_choice(lat, long, location)
     	self.update_attributes(:latitude => lat, :longitude => long, :location => location, :location_selected => true, :ordered => true)
-    end
-
-    def update_option_flag
-    	self.update_attributes(:options_flag => true)
     end
 
     def self.is_new(customer_cell_no)
