@@ -16,6 +16,7 @@ class CabRequest < ActiveRecord::Base
       self.offer_count        = 0
       self.broadcasted        = false
       self.deleted            = false
+      self.closed             = false
     	self.save
     end
 

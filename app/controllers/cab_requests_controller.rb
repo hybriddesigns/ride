@@ -103,6 +103,17 @@ class CabRequestsController < ApplicationController
         send_message(@cell_no, @message, @short_code) # 0. Kick out request if driver already registerd
       
       elsif Driver.is_not_driver(@cell_no) # is the call from user?
+
+        #Auction Case
+        @last_cab_request = CabRequest.where(:customer_cell_no => @cell_no, :ordered => true).last #get last request of this user
+        if((@last_cab_request.present?) && (@inc_message == "Next" || @inc_message == "NEXT" || @inc_message == "next"))
+          @last_cab_request.update_attributes(:broadcast => true)
+          @message = 'Sorry for the delay! Looks like our drivers are busy assisting other customers. We have put your number in priority considering the delay.'
+          send_message(@cell_no, @message, @short_code)
+          return
+        end  
+        #Auction Case
+
         if CabRequest.is_new(@cell_no) # new call?
           register_customer_and_get_location(@cell_no, @inc_message, @short_code) #location to show
         else # old call
@@ -139,11 +150,10 @@ class CabRequestsController < ApplicationController
             @message = 'Your RIDE is being arranged now. To COMPLETE ur order, If u agree to our terms, SMS Back A. To read our terms, SMS T before u complete the order.'
             send_message(@cell_no, @message, @short_code)
 
-          elsif ((@cab_request.ordered) && (@inc_message == "Next" || @inc_message == "NEXT" || @inc_message == "next"))
-            @cab_request.update_attributes(:broadcast => true)
-            @message = 'Sorry for the delay! Looks like our drivers are busy assisting other customers. We have put your number in priority considering the delay.'
-            send_message(@cell_no, @message, @short_code)
-            # broadcast_to_all_driver(@cab_request, @short_code)
+          # elsif ((@cab_request.ordered) && (@inc_message == "Next" || @inc_message == "NEXT" || @inc_message == "next"))
+          #   @cab_request.update_attributes(:broadcast => true)
+          #   @message = 'Sorry for the delay! Looks like our drivers are busy assisting other customers. We have put your number in priority considering the delay.'
+          #   send_message(@cell_no, @message, @short_code)
 
           elsif ((@inc_message == "1" || @inc_message == "2" || @inc_message == "3" || @inc_message == 1 || @inc_message == 2 || @inc_message == 3) && @cab_request.more_locations.present?) #if some option has been selected
             lock_location_choice_for_ride(@cab_request, @inc_message, @short_code) #lock the choice (1 to 100)
@@ -236,7 +246,7 @@ class CabRequestsController < ApplicationController
         @session_message  = ""
         @result['results'].each_with_index do |address, index|
           if(index > 0 && index < 3)
-            location = address["address_components"][0]['long_name']
+            location = address['address_components'][0]['long_name']
             lat      = get_latitude(address)
             long     = get_longitude(address)
             @message += (index).to_s + "- " + location.to_s + "\n"
@@ -293,7 +303,7 @@ class CabRequestsController < ApplicationController
       else #If driver not available in the locality
         @message = "All our drivers are busy at this time assisting other customers. Please try again in a few mins. FYI: We are registering more drivers now."
         send_message(@cell_no, @message, @short_code)   
-        cab_request.update_attributes(:deleted => true)       
+        cab_request.update_attributes(:closed => true, :deleted => true)       
       end  
     end
 
@@ -311,19 +321,7 @@ class CabRequestsController < ApplicationController
       else
         @message = "All our drivers are busy at this time assisting other customers. Please try again in a few mins. FYI: We are registering more drivers now."
         send_message(@cab_request.customer_cell_no, @message, short_code)        
-        @cab_request.update_attributes(:deleted => true)
-      end
-    end
-
-    def broadcast_to_all_driver(cab_request, short_code)
-      @drivers_ids  = cab_request.chosen_drivers_ids #get comma seperated ids of drivers
-      if(!@drivers_ids.empty?)
-        @drivers_ids  = @drivers_ids.split(",") #converts to array
-        @drivers_ids.each do |driver|
-          current_driver = Driver.find(driver.to_i) #Pick next driver
-          @message = "Surprise! We found you a new taxi customer. Would you like to take the request? SMS 'Y' for Yes, 'N' for No"
-          send_message(current_driver.cell_no, @message, short_code)        
-        end  
+        @cab_request.update_attributes(:closed => true, :deleted => true)
       end
     end
 
