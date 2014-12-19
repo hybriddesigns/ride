@@ -63,6 +63,15 @@ ActiveRecord::Schema.define(version: 20141218120343) do
     t.datetime "updated_at"
   end
 
+  create_table "send_sms", id: false, force: true do |t|
+    t.string  "momt",     limit: 50, null: false
+    t.string  "sender",   limit: 50, null: false
+    t.string  "receiver", limit: 50, null: false
+    t.text    "msgdata",             null: false
+    t.integer "sms_type",            null: false
+    t.string  "smsc_id",  limit: 50, null: false
+  end
+
   create_table "users", force: true do |t|
     t.string   "email",                  default: "", null: false
     t.string   "encrypted_password",     default: "", null: false
