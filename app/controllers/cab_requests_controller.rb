@@ -107,7 +107,6 @@ class CabRequestsController < ApplicationController
           register_customer_and_get_location(@cell_no, @inc_message, @short_code) #location to show
         else # old call
           @cab_request = CabRequest.where(:deleted => false, :customer_cell_no => @cell_no, :status => false).last #get pending request of this user
-          binding.pry
           if(@cab_request.options_flag)
             locations = @cab_request.more_locations.split("-")          
             if(locations.present?) #Logic for name input
