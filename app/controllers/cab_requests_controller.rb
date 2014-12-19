@@ -179,7 +179,7 @@ class CabRequestsController < ApplicationController
           else
             @message = "Please ask near by people the correct spelling to your location and send message again, Or try different name to the location"
             send_message(@cell_no, @message, @short_code)
-            @cab_request.update_attributes(:deleted => true) 
+            @cab_request.update_attributes(:closed => true, :deleted => true) 
           end
         end
       
@@ -262,7 +262,7 @@ class CabRequestsController < ApplicationController
       else
         @message = "Please ask near by people the correct spelling to your location and send message again, Or try different name to the location"
         send_message(cab_request.customer_cell_no, @message, @short_code)
-        cab_request.update_attributes(:deleted => true)
+        cab_request.update_attributes(:closed => true, :deleted => true)
       end  
 
     end
@@ -276,7 +276,7 @@ class CabRequestsController < ApplicationController
       if(choice.to_i > locations.count)
         @message = "Please ask near by people the correct spelling to your location and send message again, Or try different name to the location"
         send_message(cab_request.customer_cell_no, @message, short_code) # 0. Kick out request if driver send wrong option
-        cab_request.update_attributes(:deleted => true)
+        cab_request.update_attributes(:closed => true, :deleted => true)
       else
         chosen_location = locations[choice.to_i - 1].split(",")
         cab_request.lock_choice(chosen_location[1], chosen_location[2], chosen_location[0]) # lat, long, location
