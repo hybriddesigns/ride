@@ -450,13 +450,16 @@ class CabRequestsController < ApplicationController
       @result = Array.new
       @google_location_names = Array.new
       @google_locations['results'].each do |google_location|
-        location = Hash.new
-        location['name'] = google_location['address_components'][0]['long_name']
-        location['lat']  = google_location['geometry']['location']['lat']
-        location['long'] = google_location['geometry']['location']['lng']
-        @google_location_names.push(location['name'])
-        @result.push(location)
+        if(google_location['address_components'][0]['long_name'] != "Addis Ababa")
+          location = Hash.new
+          location['name'] = google_location['address_components'][0]['long_name']
+          location['lat']  = google_location['geometry']['location']['lat']
+          location['long'] = google_location['geometry']['location']['lng']
+          @google_location_names.push(location['name'])
+          @result.push(location)
+        end  
       end  
+      binding.pry
       #Get Results from system
       @sys_locations = Location.where("location_name Like '%#{user_entered_location}%'")
       @sys_locations.each do |sys_location|
