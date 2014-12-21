@@ -459,7 +459,6 @@ class CabRequestsController < ApplicationController
           @result.push(location)
         end  
       end  
-      binding.pry
       #Get Results from system
       @sys_locations = Location.where("location_name Like '%#{user_entered_location}%'")
       @sys_locations.each do |sys_location|
