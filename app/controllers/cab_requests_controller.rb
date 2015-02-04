@@ -188,8 +188,12 @@ class CabRequestsController < ApplicationController
         if !@inc_message.empty?
           @cab_request  = CabRequest.where(:deleted => false, :current_driver_id => @driver.id, :status => false).last
           if @cab_request.present?
+            #Send sms to driver
             @message = "Here we go... Your customer lives near "+@cab_request.location.to_s+". You must call him/her in 2 mins. Customer phone number: "+@cab_request.customer_cell_no.to_s
             send_message(@driver.cell_no, @message, @short_code)
+            #Send sms to customer
+            @message = "Congrats! Your Safe RIDE request is accepted by one of our registered drivers. You ca call him now and discuss your price and detail location @ "+@driver.cell_no.to_s
+            send_message(@cab_request.customer_cell_no, @message, @short_code)
             @cab_request.update_attributes(:status => true, :final_driver_id => @driver.id, :deleted => true)
           elsif (!present_in_broadcasted_drivers(@driver)) 
             @message = "Ops, sorry someone got the number before you. Next time text back a bit faster."
@@ -429,8 +433,12 @@ class CabRequestsController < ApplicationController
       end
 
       if @cab_request.present?
+        #Sms to driver
         @message = "Here we go... Your customer lives near "+@cab_request.location.to_s+". You must call him/her in 2 mins. Customer phone number: "+@cab_request.customer_cell_no.to_s
         send_message(driver.cell_no, @message, @short_code) 
+        #Sms to customer
+        @message = "Congrats! Your Safe RIDE request is accepted by one of our registered drivers. You ca call him now and discuss your price and detail location @ "+driver.cell_no.to_s
+        send_message(@cab_request.customer_cell_no, @message, @short_code)
         @cab_request.update_attributes(:status => true, :final_driver_id => driver.id, :deleted => true)
         return true
       else
